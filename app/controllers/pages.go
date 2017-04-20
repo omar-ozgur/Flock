@@ -5,11 +5,11 @@ import (
 )
 
 func PagesIndex(w http.ResponseWriter, r *http.Request) {
-	a := new(PagesAttributes)
-	a.Username = "Omar"
-	templates.ExecuteTemplate(w, "index.html", a)
+	page := new(PagesAttributes)
+	page.Name = "home"
+	templates.ExecuteTemplate(w, "index.html", page)
 }
 
 type PagesAttributes struct {
-	Username string
+	Name string
 }
