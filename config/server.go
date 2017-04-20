@@ -1,3 +1,7 @@
 package config
 
-var Port = 8080
+import (
+	"os"
+)
+
+var Port = os.Getenv("PORT")
