@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/omar-ozgur/flock/config"
-	"github.com/omar-ozgur/flock/utilities"
+	"github.com/omar-ozgur/flock-api/config"
+	"github.com/omar-ozgur/flock-api/utilities"
 	"net/http"
 )
 

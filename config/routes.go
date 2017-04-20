@@ -2,8 +2,8 @@ package config
 
 import (
 	"github.com/gorilla/mux"
-	"github.com/omar-ozgur/flock/app/controllers"
-	"github.com/omar-ozgur/flock/middleware"
+	"github.com/omar-ozgur/flock-api/app/controllers"
+	"github.com/omar-ozgur/flock-api/middleware"
 	"github.com/urfave/negroni"
 )
 

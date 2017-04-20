@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"github.com/omar-ozgur/flock/utilities"
+	"github.com/omar-ozgur/flock-api/utilities"
 	"net/http"
 )
 
