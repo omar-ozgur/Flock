@@ -12,5 +12,7 @@ func UsersIndex(w http.ResponseWriter, r *http.Request) {
 		models.User{Name: "Aditya", Email: "rajuaditya@gmail.com"},
 	}
 
-	json.NewEncoder(w).Encode(users)
+	if err := json.NewEncoder(w).Encode(users); err != nil {
+		panic(err)
+	}
 }
