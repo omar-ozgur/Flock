@@ -25,3 +25,5 @@ _testmain.go
 
 *.DS_Store
 
+#compiled executable flock-api
+flock-api
