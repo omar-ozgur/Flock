@@ -11,6 +11,7 @@ func InitRouter() (n *negroni.Negroni) {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/", controllers.PagesIndex)
+	r.HandleFunc("/users", controllers.UsersIndex)
 
 	n = negroni.New(negroni.HandlerFunc(middleware.CustomMiddleware), negroni.NewLogger())
 	n.UseHandler(r)
