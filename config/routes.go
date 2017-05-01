@@ -10,8 +10,9 @@ import (
 func InitRouter() (n *negroni.Negroni) {
 	r := mux.NewRouter()
 
-	r.HandleFunc("/", controllers.PagesIndex)
-	r.HandleFunc("/users", controllers.UsersIndex)
+	r.HandleFunc("/", controllers.PagesIndex).Methods("GET")
+	r.HandleFunc("/users", controllers.UsersIndex).Methods("GET")
+	r.HandleFunc("/users", controllers.UsersCreate).Methods("POST")
 
 	n = negroni.New(negroni.HandlerFunc(middleware.CustomMiddleware), negroni.NewLogger())
 	n.UseHandler(r)

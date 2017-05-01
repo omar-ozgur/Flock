@@ -15,7 +15,7 @@ func main() {
 	n := config.InitRouter()
 
 	port := config.GetPort()
-	utilities.Sugar.Infof("Started server on port %s", port)
+	utilities.Sugar.Infof("Started server on port %s\n", port)
 	err := http.ListenAndServe(fmt.Sprintf(":%s", port), n)
 	if err != nil {
 		utilities.Logger.Fatal(err.Error())

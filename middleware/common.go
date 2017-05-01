@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"github.com/omar-ozgur/flock-api/utilities"
 	"net/http"
 )
@@ -9,4 +10,5 @@ func CustomMiddleware(rw http.ResponseWriter, r *http.Request, next http.Handler
 	utilities.Logger.Info("Started request")
 	next(rw, r)
 	utilities.Logger.Info("Got response")
+	fmt.Println()
 }
