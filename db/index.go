@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
+	"github.com/omar-ozgur/flock-api/utilities"
 	_ "time"
 )
 
@@ -19,12 +20,13 @@ var DB *sql.DB
 func InitDB() {
 	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s host=%s sslmode=disable",
 		DB_USER, DB_PASSWORD, DB_NAME, DB_HOST)
-	db, err := sql.Open("postgres", dbinfo)
-	checkErr(err)
+	var err error
+	DB, err = sql.Open("postgres", dbinfo)
+	utilities.CheckErr(err)
 
-	_, err = db.Exec("SELECT * FROM users")
+	_, err = DB.Exec("SELECT * FROM users")
 	if err != nil {
-		_, err = db.Exec(`CREATE TABLE users (
+		_, err = DB.Exec(`CREATE TABLE users (
            id SERIAL,
            first_name text,
            last_name text,
@@ -32,12 +34,12 @@ func InitDB() {
            fb_id int,
            time_created timestamp
            );`)
-		checkErr(err)
+		utilities.CheckErr(err)
 	}
 
-	_, err = db.Exec("SELECT * FROM posts")
+	_, err = DB.Exec("SELECT * FROM posts")
 	if err != nil {
-		_, err = db.Exec(`CREATE TABLE posts (
+		_, err = DB.Exec(`CREATE TABLE posts (
            id SERIAL,
            title text,
            location text,
@@ -48,39 +50,39 @@ func InitDB() {
            time_created timestamp,
            time_expires timestamp
            );`)
-		checkErr(err)
+		utilities.CheckErr(err)
 	}
 
-	_, err = db.Exec("SELECT * FROM attendees")
+	_, err = DB.Exec("SELECT * FROM attendees")
 	if err != nil {
-		_, err = db.Exec(`CREATE TABLE attendees (
+		_, err = DB.Exec(`CREATE TABLE attendees (
            id SERIAL,
            post_id int,
            user_id int
            );`)
-		checkErr(err)
+		utilities.CheckErr(err)
 	}
 
 	// var lastInsertId int
-	// err = db.QueryRow("INSERT INTO users(first_name, last_name, email, fb_id, time_created) VALUES($1, $2, $3, $4, $5) returning id;", "Omar", "Ozgur", "oozgur217@gmail.com", "1", time.Now()).Scan(&lastInsertId)
-	// checkErr(err)
+	// err = DB.QueryRow("INSERT INTO users(first_name, last_name, email, fb_id, time_created) VALUES($1, $2, $3, $4, $5) returning id;", "Omar", "Ozgur", "oozgur217@gmail.com", "1", time.Now()).Scan(&lastInsertId)
+	// utilities.CheckErr(err)
 	// fmt.Println("last inserted id =", lastInsertId)
 
 	// fmt.Println("# Updating")
-	// stmt, err := db.Prepare("update userinfo set username=$1 where uid=$2")
-	// checkErr(err)
+	// stmt, err := DB.Prepare("update userinfo set username=$1 where uid=$2")
+	// utilities.CheckErr(err)
 
 	// res, err := stmt.Exec("astaxieupdate", lastInsertId)
-	// checkErr(err)
+	// utilities.CheckErr(err)
 
 	// affect, err := res.RowsAffected()
-	// checkErr(err)
+	// utilities.CheckErr(err)
 
 	// fmt.Println(affect, "rows changed")
 
 	// fmt.Println("# Querying")
-	// rows, err := db.Query("SELECT * FROM users")
-	// checkErr(err)
+	// rows, err := DB.Query("SELECT * FROM users")
+	// utilities.CheckErr(err)
 
 	// fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v\n", "id", "first_name", "last_name", "email", "fb_id", "time_created")
 	// for rows.Next() {
@@ -91,25 +93,19 @@ func InitDB() {
 	// 	var fb_id int
 	// 	var time_created time.Time
 	// 	err = rows.Scan(&id, &first_name, &last_name, &email, &fb_id, &time_created)
-	// 	checkErr(err)
+	// 	utilities.CheckErr(err)
 	// 	fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v\n", id, first_name, last_name, email, fb_id, time_created)
 	// }
 
 	// fmt.Println("# Deleting")
-	// stmt, err = db.Prepare("delete from userinfo where uid=$1")
-	// checkErr(err)
+	// stmt, err = DB.Prepare("delete from userinfo where uid=$1")
+	// utilities.CheckErr(err)
 
 	// res, err = stmt.Exec(lastInsertId)
-	// checkErr(err)
+	// utilities.CheckErr(err)
 
 	// affect, err = res.RowsAffected()
-	// checkErr(err)
+	// utilities.CheckErr(err)
 
 	// fmt.Println(affect, "rows changed")
-}
-
-func checkErr(err error) {
-	if err != nil {
-		panic(err)
-	}
 }

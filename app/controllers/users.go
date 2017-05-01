@@ -7,12 +7,11 @@ import (
 )
 
 func UsersIndex(w http.ResponseWriter, r *http.Request) {
-	users := models.Users{
-		models.User{Name: "Omar", Email: "oozgur217@gmail.com"},
-		models.User{Name: "Aditya", Email: "rajuaditya@gmail.com"},
-	}
+	user := models.User{First_name: "Omar", Last_name: "Ozgur", Email: "oozgur217@gmail.com", Fb_id: 1}
+	models.SaveUser(user)
+	models.QueryUsers()
 
-	if err := json.NewEncoder(w).Encode(users); err != nil {
+	if err := json.NewEncoder(w).Encode(user); err != nil {
 		panic(err)
 	}
 }
