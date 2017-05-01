@@ -5,23 +5,31 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/omar-ozgur/flock-api/utilities"
+	"os"
 	_ "time"
 )
 
 const (
 	DB_USER     = "postgres"
 	DB_PASSWORD = "postgres"
-	DB_NAME     = "flock-api"
+	DB_NAME     = "flock_api"
 	DB_HOST     = "localhost"
 )
 
 var DB *sql.DB
 
 func InitDB() {
-	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s host=%s sslmode=disable",
-		DB_USER, DB_PASSWORD, DB_NAME, DB_HOST)
+	DBEnv := os.Getenv("FLOCK_API_URL")
+	var DBInfo string
+	if DBEnv == "" {
+		DBInfo = fmt.Sprintf("user=%s password=%s dbname=%s host=%s sslmode=disable",
+			DB_USER, DB_PASSWORD, DB_NAME, DB_HOST)
+	} else {
+		DBInfo = fmt.Sprintf("user=%s password=%s dbname=%s host=%s sslmode=disable",
+			DB_USER, DB_PASSWORD, DB_NAME, DBEnv)
+	}
 	var err error
-	DB, err = sql.Open("postgres", dbinfo)
+	DB, err = sql.Open("postgres", DBInfo)
 	utilities.CheckErr(err)
 
 	_, err = DB.Exec("SELECT * FROM users")
