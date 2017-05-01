@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/omar-ozgur/flock-api/config"
+	"github.com/omar-ozgur/flock-api/db"
 	"github.com/omar-ozgur/flock-api/utilities"
 	"net/http"
 )
@@ -10,6 +11,8 @@ import (
 func main() {
 
 	n := config.InitRouter()
+
+	db.InitDB()
 
 	port := config.GetPort()
 	utilities.Sugar.Infof("Started server on port %s", port)
