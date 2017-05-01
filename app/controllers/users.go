@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/mux"
 	"github.com/omar-ozgur/flock-api/app/models"
 	"io/ioutil"
 	"net/http"
@@ -21,10 +22,31 @@ func UsersCreate(w http.ResponseWriter, r *http.Request) {
 	b, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(b, &user)
 	fmt.Println(user)
-	status := models.SaveUser(user)
+	status := models.CreateUser(user)
 	if status == true {
 		fmt.Println("Inserted new user")
 	} else {
 		fmt.Println("New user is not valid")
 	}
+}
+
+func UsersUpdate(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+	var user models.User
+	b, _ := ioutil.ReadAll(r.Body)
+	json.Unmarshal(b, &user)
+	fmt.Println(user)
+	status := models.UpdateUser(vars["id"], user)
+	if status == true {
+		fmt.Println("Updated user")
+	} else {
+		fmt.Println("User info is not valid")
+	}
+}
+
+func UsersDelete(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	models.DeleteUser(vars["id"])
+	fmt.Println("Deleted user")
 }
