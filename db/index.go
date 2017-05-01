@@ -19,14 +19,10 @@ const (
 var DB *sql.DB
 
 func InitDB() {
-	DBEnv := os.Getenv("FLOCK_API_URL")
-	var DBInfo string
-	if DBEnv == "" {
+	DBInfo := os.Getenv("DB_INFO")
+	if DBInfo == "" {
 		DBInfo = fmt.Sprintf("user=%s password=%s dbname=%s host=%s sslmode=disable",
 			DB_USER, DB_PASSWORD, DB_NAME, DB_HOST)
-	} else {
-		DBInfo = fmt.Sprintf("user=%s password=%s dbname=%s host=%s sslmode=disable",
-			DB_USER, DB_PASSWORD, DB_NAME, DBEnv)
 	}
 	var err error
 	DB, err = sql.Open("postgres", DBInfo)
