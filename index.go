@@ -10,9 +10,9 @@ import (
 
 func main() {
 
-	n := config.InitRouter()
-
 	db.InitDB()
+
+	n := config.InitRouter()
 
 	port := config.GetPort()
 	utilities.Sugar.Infof("Started server on port %s", port)

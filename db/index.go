@@ -14,13 +14,13 @@ const (
 	DB_HOST     = "localhost"
 )
 
+var DB *sql.DB
+
 func InitDB() {
 	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s host=%s sslmode=disable",
 		DB_USER, DB_PASSWORD, DB_NAME, DB_HOST)
-	var db *sql.DB
 	db, err := sql.Open("postgres", dbinfo)
 	checkErr(err)
-	defer db.Close()
 
 	_, err = db.Exec("SELECT * FROM users")
 	if err != nil {
