@@ -1,10 +1,12 @@
 package models
 
 import (
+	"bytes"
 	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/omar-ozgur/flock-api/db"
 	"github.com/omar-ozgur/flock-api/utilities"
+	"reflect"
 	"time"
 )
 
@@ -17,55 +19,123 @@ type User struct {
 	Time_created time.Time
 }
 
+const tableName = "users"
+
+var auto = map[string]bool{"Id": true, "Time_created": true}
+var required = map[string]bool{"First_name": true, "Last_name": true, "Email": true, "Fb_id": true}
+
 func CreateUser(user User) bool {
-	var lastInsertId int
-	if user.First_name == "" || user.Last_name == "" || user.Email == "" || user.Fb_id == 0 {
+
+	// Get user fields
+	value := reflect.ValueOf(user)
+	if value.NumField() <= len(required) {
 		return false
 	}
-	err := db.DB.QueryRow("INSERT INTO users(first_name, last_name, email, fb_id, time_created) VALUES($1, $2, $3, $4, $5) returning id;", user.First_name, user.Last_name, user.Email, user.Fb_id, time.Now()).Scan(&lastInsertId)
+
+	// Create query string
+	var queryStr bytes.Buffer
+	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (", tableName))
+
+	// Set present column names
+	var first = true
+	var values []string
+	for i := 0; i < value.NumField(); i++ {
+		name := value.Type().Field(i).Name
+		if auto[name] {
+			continue
+		}
+		if required[name] && reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
+			return false
+		}
+		if !first {
+			queryStr.WriteString(", ")
+		} else {
+			first = false
+		}
+		queryStr.WriteString(fmt.Sprintf("%v", value.Type().Field(i).Name))
+		values = append(values, fmt.Sprintf("%v", value.Field(i).Interface()))
+	}
+
+	// Set present column values
+	queryStr.WriteString(") VALUES(")
+	first = true
+	for i := 0; i < len(values); i++ {
+		if !first {
+			queryStr.WriteString(", ")
+		} else {
+			first = false
+		}
+		queryStr.WriteString(fmt.Sprintf("'%v'", values[i]))
+	}
+
+	// Finish and execute query
+	queryStr.WriteString(")")
+	fmt.Println("SQL Query:", queryStr.String())
+	_, err := db.DB.Exec(queryStr.String())
 	utilities.CheckErr(err)
+
 	return true
 }
 
 func UpdateUser(id string, user User) bool {
-	var err error
 
-	if user.First_name != "" {
-		_, err = db.DB.Exec(fmt.Sprintf("update users set first_name='%s' where id=%s", user.First_name, id))
+	// Get user fields
+	value := reflect.ValueOf(user)
+	if value.NumField() <= 0 {
+		return false
 	}
-	utilities.CheckErr(err)
 
-	if user.Last_name != "" {
-		_, err = db.DB.Exec(fmt.Sprintf("update users set last_name='%s' where id=%s", user.Last_name, id))
-	}
-	utilities.CheckErr(err)
+	// Create query string
+	var queryStr bytes.Buffer
+	queryStr.WriteString(fmt.Sprintf("UPDATE %s SET", tableName))
 
-	if user.Email != "" {
-		_, err = db.DB.Exec(fmt.Sprintf("update users set email='%s' where id=%s", user.Email, id))
+	// Set present column names and values
+	var first = true
+	for i := 0; i < value.NumField(); i++ {
+		name := value.Type().Field(i).Name
+		if auto[name] {
+			continue
+		}
+		if !first {
+			queryStr.WriteString(", ")
+		} else {
+			queryStr.WriteString(" ")
+			first = false
+		}
+		if reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
+			return false
+		}
+		queryStr.WriteString(fmt.Sprintf("%v='%v'", value.Type().Field(i).Name, value.Field(i).Interface()))
 	}
-	utilities.CheckErr(err)
 
-	if user.Fb_id != 0 {
-		_, err = db.DB.Exec(fmt.Sprintf("update users set fb_id='%d' where id=%s", user.Fb_id, id))
-	}
+	// Finish and execute query
+	queryStr.WriteString(fmt.Sprintf(" WHERE id='%s'", id))
+	fmt.Println("SQL Query:", queryStr.String())
+	_, err := db.DB.Exec(queryStr.String())
 	utilities.CheckErr(err)
 
 	return true
-
 }
 
 func DeleteUser(id string) {
-	_, err := db.DB.Exec(fmt.Sprintf("delete from users where id=%s", id))
+
+	// Create and execute query
+	queryStr := fmt.Sprintf("DELETE FROM %s WHERE id=%s", tableName, id)
+	fmt.Println("SQL Query:", queryStr)
+	_, err := db.DB.Exec(queryStr)
 	utilities.CheckErr(err)
 }
 
 func QueryUsers() []User {
-	fmt.Println("# Querying Users")
-	rows, err := db.DB.Query("SELECT * FROM users")
+
+	// Create and execute query
+	queryStr := fmt.Sprintf("SELECT * FROM %s", tableName)
+	fmt.Println("SQL Query:", queryStr)
+	rows, err := db.DB.Query(queryStr)
 	utilities.CheckErr(err)
 
+	// Print table
 	var users []User
-
 	fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v\n", "id", "first_name", "last_name", "email", "fb_id", "time_created")
 	for rows.Next() {
 		var id int

@@ -14,6 +14,7 @@ func UsersIndex(w http.ResponseWriter, r *http.Request) {
 	users := models.QueryUsers()
 	j, _ := json.Marshal(users)
 	w.Write(j)
+	fmt.Println("Retrieved users")
 }
 
 func UsersCreate(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +22,6 @@ func UsersCreate(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	b, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(b, &user)
-	fmt.Println(user)
 	status := models.CreateUser(user)
 	if status == true {
 		fmt.Println("Inserted new user")
@@ -36,7 +36,6 @@ func UsersUpdate(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	b, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(b, &user)
-	fmt.Println(user)
 	status := models.UpdateUser(vars["id"], user)
 	if status == true {
 		fmt.Println("Updated user")

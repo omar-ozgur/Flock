@@ -13,7 +13,7 @@ func InitRouter() (n *negroni.Negroni) {
 	r.HandleFunc("/", controllers.PagesIndex).Methods("GET")
 	r.HandleFunc("/users", controllers.UsersIndex).Methods("GET")
 	r.HandleFunc("/users", controllers.UsersCreate).Methods("POST")
-	r.HandleFunc("/users/{id}", controllers.UsersUpdate).Methods("POST")
+	r.HandleFunc("/users/{id}", controllers.UsersUpdate).Methods("PUT")
 	r.HandleFunc("/users/{id}", controllers.UsersDelete).Methods("DELETE")
 
 	n = negroni.New(negroni.HandlerFunc(middleware.CustomMiddleware), negroni.NewLogger())

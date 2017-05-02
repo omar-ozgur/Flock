@@ -36,7 +36,7 @@ func InitDB() {
            last_name text,
            email text,
            fb_id int,
-           time_created timestamp
+           time_created timestamp DEFAULT now()
            );`)
 		utilities.CheckErr(err)
 	}
@@ -51,7 +51,7 @@ func InitDB() {
            latitude double precision,
            longitude double precision,
            zip int,           
-           time_created timestamp,
+           time_created timestamp DEFAULT now(),
            time_expires timestamp
            );`)
 		utilities.CheckErr(err)
