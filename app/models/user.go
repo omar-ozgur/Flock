@@ -6,6 +6,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/omar-ozgur/flock-api/db"
 	"github.com/omar-ozgur/flock-api/utilities"
+	"golang.org/x/crypto/bcrypt"
 	"reflect"
 	"time"
 )
@@ -16,13 +17,14 @@ type User struct {
 	Last_name    string
 	Email        string
 	Fb_id        int
+	Password     string
 	Time_created time.Time
 }
 
 const userTableName = "users"
 
 var UserAutoParams = map[string]bool{"Id": true, "Time_created": true}
-var UserRequiredParams = map[string]bool{"First_name": true, "Last_name": true, "Email": true, "Fb_id": true}
+var UserRequiredParams = map[string]bool{"First_name": true, "Last_name": true, "Email": true, "Fb_id": true, "Password": true}
 
 func CreateUser(user User) bool {
 
@@ -53,7 +55,14 @@ func CreateUser(user User) bool {
 			first = false
 		}
 		queryStr.WriteString(fmt.Sprintf("%v", value.Type().Field(i).Name))
-		values = append(values, fmt.Sprintf("%v", value.Field(i).Interface()))
+		if name == "Password" {
+			hash, err := bcrypt.GenerateFromPassword([]byte(value.Field(i).Interface().(string)), bcrypt.DefaultCost)
+			utilities.CheckErr(err)
+			fmt.Println("Hash to store:", string(hash))
+			values = append(values, fmt.Sprintf("%v", hash))
+		} else {
+			values = append(values, fmt.Sprintf("%v", value.Field(i).Interface()))
+		}
 	}
 
 	// Set present column values
@@ -105,7 +114,14 @@ func UpdateUser(id string, user User) bool {
 			queryStr.WriteString(" ")
 			first = false
 		}
-		queryStr.WriteString(fmt.Sprintf("%v='%v'", value.Type().Field(i).Name, value.Field(i).Interface()))
+		if name == "Password" {
+			hash, err := bcrypt.GenerateFromPassword([]byte(value.Field(i).Interface().(string)), bcrypt.DefaultCost)
+			utilities.CheckErr(err)
+			fmt.Println("Hash to store:", string(hash))
+			queryStr.WriteString(fmt.Sprintf("%v='%v'", value.Type().Field(i).Name, hash))
+		} else {
+			queryStr.WriteString(fmt.Sprintf("%v='%v'", value.Type().Field(i).Name, value.Field(i).Interface()))
+		}
 	}
 
 	// Finish and execute query
@@ -135,7 +151,7 @@ func GetUser(id string) User {
 
 	// Get user info
 	var user User
-	err := row.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Time_created)
+	err := row.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Password, &user.Time_created)
 	utilities.CheckErr(err)
 
 	return user
@@ -151,13 +167,13 @@ func GetUsers() []User {
 
 	// Print table
 	var users []User
-	fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v\n", "id", "first_name", "last_name", "email", "fb_id", "time_created")
+	fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v | %-20v\n", "id", "first_name", "last_name", "email", "fb_id", "password", "time_created")
 	for rows.Next() {
 		var user User
-		err = rows.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Time_created)
+		err = rows.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Password, &user.Time_created)
 		utilities.CheckErr(err)
 		users = append(users, user)
-		fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v\n", user.Id, user.First_name, user.Last_name, user.Email, user.Fb_id, user.Time_created)
+		fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v | %-20v\n", user.Id, user.First_name, user.Last_name, user.Email, user.Fb_id, user.Password, user.Time_created)
 	}
 
 	return users
