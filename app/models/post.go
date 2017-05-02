@@ -72,10 +72,15 @@ func CreatePost(post Post) bool {
 	}
 
 	// Finish and execute query
-	queryStr.WriteString(")")
+	queryStr.WriteString(") returning id")
 	fmt.Println("SQL Query:", queryStr.String())
-	_, err := db.DB.Exec(queryStr.String())
+	var lastInsertId int
+	err := db.DB.QueryRow(queryStr.String()).Scan(&lastInsertId)
 	utilities.CheckErr(err)
+
+	// Create attendee
+	attendee := Attendee{Post_id: lastInsertId, User_id: post.User_id}
+	CreateAttendee(attendee)
 
 	return true
 }
