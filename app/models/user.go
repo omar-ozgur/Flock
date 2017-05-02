@@ -126,7 +126,22 @@ func DeleteUser(id string) {
 	utilities.CheckErr(err)
 }
 
-func QueryUsers() []User {
+func GetUser(id string) User {
+
+	// Create and execute query
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=%s", tableName, id)
+	fmt.Println("SQL Query:", queryStr)
+	row := db.DB.QueryRow(queryStr)
+
+	// Get user info
+	var user User
+	err := row.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Time_created)
+	utilities.CheckErr(err)
+
+	return user
+}
+
+func GetUsers() []User {
 
 	// Create and execute query
 	queryStr := fmt.Sprintf("SELECT * FROM %s", tableName)
@@ -138,17 +153,11 @@ func QueryUsers() []User {
 	var users []User
 	fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v\n", "id", "first_name", "last_name", "email", "fb_id", "time_created")
 	for rows.Next() {
-		var id int
-		var first_name string
-		var last_name string
-		var email string
-		var fb_id int
-		var time_created time.Time
-		err = rows.Scan(&id, &first_name, &last_name, &email, &fb_id, &time_created)
+		var user User
+		err = rows.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Time_created)
 		utilities.CheckErr(err)
-		user := User{Id: id, First_name: first_name, Last_name: last_name, Email: email, Fb_id: fb_id, Time_created: time_created}
-		users = append(users, (user))
-		fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v\n", id, first_name, last_name, email, fb_id, time_created)
+		users = append(users, user)
+		fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v\n", user.Id, user.First_name, user.Last_name, user.Email, user.Fb_id, user.Time_created)
 	}
 
 	return users

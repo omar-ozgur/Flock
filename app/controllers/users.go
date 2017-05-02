@@ -11,10 +11,19 @@ import (
 
 func UsersIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	users := models.QueryUsers()
+	users := models.GetUsers()
 	j, _ := json.Marshal(users)
 	w.Write(j)
 	fmt.Println("Retrieved users")
+}
+
+func UsersShow(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+	user := models.GetUser(vars["id"])
+	j, _ := json.Marshal(user)
+	w.Write(j)
+	fmt.Println("Retrieved user")
 }
 
 func UsersCreate(w http.ResponseWriter, r *http.Request) {
