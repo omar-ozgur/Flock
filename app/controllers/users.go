@@ -33,7 +33,7 @@ func UsersCreate(w http.ResponseWriter, r *http.Request) {
 	json.Unmarshal(b, &user)
 	status := models.CreateUser(user)
 	if status == true {
-		fmt.Println("Inserted new user")
+		fmt.Println("Created new user")
 	} else {
 		fmt.Println("New user is not valid")
 	}

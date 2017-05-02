@@ -7,44 +7,40 @@ import (
 	"github.com/omar-ozgur/flock-api/db"
 	"github.com/omar-ozgur/flock-api/utilities"
 	"reflect"
-	"time"
 )
 
-type User struct {
-	Id           int
-	First_name   string
-	Last_name    string
-	Email        string
-	Fb_id        int
-	Time_created time.Time
+type Attendee struct {
+	Id      int
+	Post_id int
+	User_id int
 }
 
-const userTableName = "users"
+const attendeeTableName = "attendees"
 
-var UserAutoParams = map[string]bool{"Id": true, "Time_created": true}
-var UserRequiredParams = map[string]bool{"First_name": true, "Last_name": true, "Email": true, "Fb_id": true}
+var attendeeAutoParams = map[string]bool{"Id": true}
+var attendeeRequiredParams = map[string]bool{"Post_id": true, "User_id": true}
 
-func CreateUser(user User) bool {
+func CreateAttendee(attendee Attendee) bool {
 
-	// Get user fields
-	value := reflect.ValueOf(user)
-	if value.NumField() <= len(UserRequiredParams) {
+	// Get attendee fields
+	value := reflect.ValueOf(attendee)
+	if value.NumField() <= len(attendeeRequiredParams) {
 		return false
 	}
 
 	// Create query string
 	var queryStr bytes.Buffer
-	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (", userTableName))
+	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (", attendeeTableName))
 
 	// Set present column names
 	var first = true
 	var values []string
 	for i := 0; i < value.NumField(); i++ {
 		name := value.Type().Field(i).Name
-		if UserAutoParams[name] {
+		if attendeeAutoParams[name] {
 			continue
 		}
-		if UserRequiredParams[name] && reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
+		if attendeeRequiredParams[name] && reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
 			return false
 		}
 		if !first {
@@ -77,23 +73,23 @@ func CreateUser(user User) bool {
 	return true
 }
 
-func UpdateUser(id string, user User) bool {
+func UpdateAttendee(id string, attendee Attendee) bool {
 
-	// Get user fields
-	value := reflect.ValueOf(user)
+	// Get attendee fields
+	value := reflect.ValueOf(attendee)
 	if value.NumField() <= 0 {
 		return false
 	}
 
 	// Create query string
 	var queryStr bytes.Buffer
-	queryStr.WriteString(fmt.Sprintf("UPDATE %s SET", userTableName))
+	queryStr.WriteString(fmt.Sprintf("UPDATE %s SET", attendeeTableName))
 
 	// Set present column names and values
 	var first = true
 	for i := 0; i < value.NumField(); i++ {
 		name := value.Type().Field(i).Name
-		if UserAutoParams[name] {
+		if attendeeAutoParams[name] {
 			continue
 		}
 		if reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
@@ -117,48 +113,48 @@ func UpdateUser(id string, user User) bool {
 	return true
 }
 
-func DeleteUser(id string) {
+func DeleteAttendee(id string) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("DELETE FROM %s WHERE id=%s", userTableName, id)
+	queryStr := fmt.Sprintf("DELETE FROM %s WHERE id=%s", attendeeTableName, id)
 	fmt.Println("SQL Query:", queryStr)
 	_, err := db.DB.Exec(queryStr)
 	utilities.CheckErr(err)
 }
 
-func GetUser(id string) User {
+func GetAttendee(id string) Attendee {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=%s", userTableName, id)
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=%s", attendeeTableName, id)
 	fmt.Println("SQL Query:", queryStr)
 	row := db.DB.QueryRow(queryStr)
 
-	// Get user info
-	var user User
-	err := row.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Time_created)
+	// Get attendee info
+	var attendee Attendee
+	err := row.Scan(&attendee.Id, &attendee.Post_id, &attendee.User_id)
 	utilities.CheckErr(err)
 
-	return user
+	return attendee
 }
 
-func GetUsers() []User {
+func GetAttendees() []Attendee {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s", userTableName)
+	queryStr := fmt.Sprintf("SELECT * FROM %s", attendeeTableName)
 	fmt.Println("SQL Query:", queryStr)
 	rows, err := db.DB.Query(queryStr)
 	utilities.CheckErr(err)
 
 	// Print table
-	var users []User
-	fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v\n", "id", "first_name", "last_name", "email", "fb_id", "time_created")
+	var attendees []Attendee
+	fmt.Printf(" %-5v | %-10v | %-10v\n", "id", "post_id", "user_id")
 	for rows.Next() {
-		var user User
-		err = rows.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Time_created)
+		var attendee Attendee
+		err = rows.Scan(&attendee.Id, &attendee.Post_id, &attendee.User_id)
 		utilities.CheckErr(err)
-		users = append(users, user)
-		fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v\n", user.Id, user.First_name, user.Last_name, user.Email, user.Fb_id, user.Time_created)
+		attendees = append(attendees, attendee)
+		fmt.Printf(" %-5v | %-10v | %-10v\n", attendee.Id, attendee.Post_id, attendee.User_id)
 	}
 
-	return users
+	return attendees
 }

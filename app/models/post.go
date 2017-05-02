@@ -10,41 +10,44 @@ import (
 	"time"
 )
 
-type User struct {
+type Post struct {
 	Id           int
-	First_name   string
-	Last_name    string
-	Email        string
-	Fb_id        int
+	Title        string
+	Location     string
+	User_id      int
+	Latitude     float64
+	Longitude    float64
+	Zip          int
 	Time_created time.Time
+	Time_expires time.Time
 }
 
-const userTableName = "users"
+const postTableName = "posts"
 
-var UserAutoParams = map[string]bool{"Id": true, "Time_created": true}
-var UserRequiredParams = map[string]bool{"First_name": true, "Last_name": true, "Email": true, "Fb_id": true}
+var postAutoParams = map[string]bool{"Id": true, "Time_created": true, "Time_expires": true}
+var postRequiredParams = map[string]bool{"Title": true, "Location": true, "User_id": true, "Latitude": true, "Longitude": true, "Zip": true}
 
-func CreateUser(user User) bool {
+func CreatePost(post Post) bool {
 
-	// Get user fields
-	value := reflect.ValueOf(user)
-	if value.NumField() <= len(UserRequiredParams) {
+	// Get post fields
+	value := reflect.ValueOf(post)
+	if value.NumField() <= len(postRequiredParams) {
 		return false
 	}
 
 	// Create query string
 	var queryStr bytes.Buffer
-	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (", userTableName))
+	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (", postTableName))
 
 	// Set present column names
 	var first = true
 	var values []string
 	for i := 0; i < value.NumField(); i++ {
 		name := value.Type().Field(i).Name
-		if UserAutoParams[name] {
+		if postAutoParams[name] {
 			continue
 		}
-		if UserRequiredParams[name] && reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
+		if postRequiredParams[name] && reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
 			return false
 		}
 		if !first {
@@ -77,23 +80,23 @@ func CreateUser(user User) bool {
 	return true
 }
 
-func UpdateUser(id string, user User) bool {
+func UpdatePost(id string, post Post) bool {
 
-	// Get user fields
-	value := reflect.ValueOf(user)
+	// Get post fields
+	value := reflect.ValueOf(post)
 	if value.NumField() <= 0 {
 		return false
 	}
 
 	// Create query string
 	var queryStr bytes.Buffer
-	queryStr.WriteString(fmt.Sprintf("UPDATE %s SET", userTableName))
+	queryStr.WriteString(fmt.Sprintf("UPDATE %s SET", postTableName))
 
 	// Set present column names and values
 	var first = true
 	for i := 0; i < value.NumField(); i++ {
 		name := value.Type().Field(i).Name
-		if UserAutoParams[name] {
+		if postAutoParams[name] {
 			continue
 		}
 		if reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
@@ -117,48 +120,48 @@ func UpdateUser(id string, user User) bool {
 	return true
 }
 
-func DeleteUser(id string) {
+func DeletePost(id string) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("DELETE FROM %s WHERE id=%s", userTableName, id)
+	queryStr := fmt.Sprintf("DELETE FROM %s WHERE id=%s", postTableName, id)
 	fmt.Println("SQL Query:", queryStr)
 	_, err := db.DB.Exec(queryStr)
 	utilities.CheckErr(err)
 }
 
-func GetUser(id string) User {
+func GetPost(id string) Post {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=%s", userTableName, id)
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=%s", postTableName, id)
 	fmt.Println("SQL Query:", queryStr)
 	row := db.DB.QueryRow(queryStr)
 
-	// Get user info
-	var user User
-	err := row.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Time_created)
+	// Get post info
+	var post Post
+	err := row.Scan(&post.Id, &post.Title, &post.Location, &post.User_id, &post.Latitude, &post.Longitude, &post.Zip, &post.Time_created, &post.Time_expires)
 	utilities.CheckErr(err)
 
-	return user
+	return post
 }
 
-func GetUsers() []User {
+func GetPosts() []Post {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s", userTableName)
+	queryStr := fmt.Sprintf("SELECT * FROM %s", postTableName)
 	fmt.Println("SQL Query:", queryStr)
 	rows, err := db.DB.Query(queryStr)
 	utilities.CheckErr(err)
 
 	// Print table
-	var users []User
-	fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v\n", "id", "first_name", "last_name", "email", "fb_id", "time_created")
+	var posts []Post
+	fmt.Printf(" %-5v | %-20v | %-20v | %-5v | %-20v | %-20v | %-5v | %-20v | %-20v\n", "id", "title", "location", "user_id", "latitude", "longitude", "zip", "time_created", "time_expires")
 	for rows.Next() {
-		var user User
-		err = rows.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Time_created)
+		var post Post
+		err = rows.Scan(&post.Id, &post.Title, &post.Location, &post.User_id, &post.Latitude, &post.Longitude, &post.Zip, &post.Time_created, &post.Time_expires)
 		utilities.CheckErr(err)
-		users = append(users, user)
-		fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v\n", user.Id, user.First_name, user.Last_name, user.Email, user.Fb_id, user.Time_created)
+		posts = append(posts, post)
+		fmt.Printf(" %-5v | %-20v | %-20v | %-5v | %-20v | %-20v | %-5v | %-20v | %-20v\n", post.Id, post.Title, post.Location, post.User_id, post.Latitude, post.Longitude, post.Zip, post.Time_created, post.Time_expires)
 	}
 
-	return users
+	return posts
 }

@@ -52,7 +52,7 @@ func InitDB() {
            longitude double precision,
            zip int,           
            time_created timestamp DEFAULT now(),
-           time_expires timestamp
+           time_expires timestamp DEFAULT now()
            );`)
 		utilities.CheckErr(err)
 	}
