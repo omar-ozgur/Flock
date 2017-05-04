@@ -10,12 +10,15 @@ import (
 func InitRouter() (n *negroni.Negroni) {
 	r := mux.NewRouter()
 
+	authorizationHandler := middleware.JWTMiddleware.Handler
 	r.HandleFunc("/", controllers.PagesIndex).Methods("GET")
-	r.HandleFunc("/users", controllers.UsersIndex).Methods("GET")
-	r.HandleFunc("/users", controllers.UsersCreate).Methods("POST")
-	r.HandleFunc("/users/{id}", controllers.UsersShow).Methods("GET")
-	r.HandleFunc("/users/{id}", controllers.UsersUpdate).Methods("PUT")
-	r.HandleFunc("/users/{id}", controllers.UsersDelete).Methods("DELETE")
+	r.Handle("/users", authorizationHandler(controllers.UsersIndex)).Methods("GET")
+	r.Handle("/users", controllers.UsersCreate).Methods("POST")
+	r.Handle("/users/{id}", authorizationHandler(controllers.UsersShow)).Methods("GET")
+	r.Handle("/users/{id}", authorizationHandler(controllers.UsersUpdate)).Methods("PUT")
+	r.Handle("/users/{id}", authorizationHandler(controllers.UsersDelete)).Methods("DELETE")
+
+	r.Handle("/login", controllers.UsersLogin).Methods("Post")
 
 	r.HandleFunc("/posts", controllers.PostsIndex).Methods("GET")
 	r.HandleFunc("/posts", controllers.PostsCreate).Methods("POST")

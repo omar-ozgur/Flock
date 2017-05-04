@@ -13,7 +13,7 @@ func GetPort() string {
 	// Set a default port if there is nothing in the environment
 	if port == "" {
 		port = defaultPort
-		utilities.Sugar.Infof("No PORT environment variable detected, defaulting to port %d", port)
+		utilities.Sugar.Infof("No PORT environment variable detected, defaulting to port %s", port)
 	}
 	return port
 }

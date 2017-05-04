@@ -3,6 +3,7 @@ package models
 import (
 	"bytes"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	_ "github.com/lib/pq"
 	"github.com/omar-ozgur/flock-api/db"
 	"github.com/omar-ozgur/flock-api/utilities"
@@ -17,7 +18,7 @@ type User struct {
 	Last_name    string
 	Email        string
 	Fb_id        int
-	Password     string
+	Password     []byte
 	Time_created time.Time
 }
 
@@ -56,7 +57,7 @@ func CreateUser(user User) bool {
 		}
 		queryStr.WriteString(fmt.Sprintf("%v", value.Type().Field(i).Name))
 		if name == "Password" {
-			hash, err := bcrypt.GenerateFromPassword([]byte(value.Field(i).Interface().(string)), bcrypt.DefaultCost)
+			hash, err := bcrypt.GenerateFromPassword(value.Field(i).Interface().([]byte), bcrypt.DefaultCost)
 			utilities.CheckErr(err)
 			fmt.Println("Hash to store:", string(hash))
 			values = append(values, fmt.Sprintf("%v", hash))
@@ -177,4 +178,37 @@ func GetUsers() []User {
 	}
 
 	return users
+}
+
+func LoginUser(user User) string {
+	if user.Email == "" || len(user.Password) == 0 {
+		return ""
+	}
+	var foundUser User
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE email='%s'", userTableName, user.Email)
+	fmt.Println("SQL Query:", queryStr)
+	row := db.DB.QueryRow(queryStr)
+	err := row.Scan(&foundUser.Id, &foundUser.First_name, &foundUser.Last_name, &foundUser.Email, &foundUser.Fb_id, &foundUser.Password, &foundUser.Time_created)
+	if err != nil {
+		return ""
+	}
+	var hash []byte
+	hash, err = bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return ""
+	}
+	err = bcrypt.CompareHashAndPassword(hash, user.Password)
+	if err != nil {
+		return ""
+	}
+
+	var secretKey = []byte("secret")
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := token.Claims.(jwt.MapClaims)
+	claims["first_name"] = user.First_name
+	claims["last_name"] = user.Last_name
+	claims["email"] = user.email
+	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
+	tokenString, _ := token.SignedString(secretKey)
+	return tokenString
 }

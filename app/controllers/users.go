@@ -9,24 +9,24 @@ import (
 	"net/http"
 )
 
-func UsersIndex(w http.ResponseWriter, r *http.Request) {
+var UsersIndex = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	users := models.GetUsers()
 	j, _ := json.Marshal(users)
 	w.Write(j)
 	fmt.Println("Retrieved users")
-}
+})
 
-func UsersShow(w http.ResponseWriter, r *http.Request) {
+var UsersShow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 	user := models.GetUser(vars["id"])
 	j, _ := json.Marshal(user)
 	w.Write(j)
 	fmt.Println("Retrieved user")
-}
+})
 
-func UsersCreate(w http.ResponseWriter, r *http.Request) {
+var UsersCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var user models.User
 	b, _ := ioutil.ReadAll(r.Body)
@@ -37,9 +37,9 @@ func UsersCreate(w http.ResponseWriter, r *http.Request) {
 	} else {
 		fmt.Println("New user is not valid")
 	}
-}
+})
 
-func UsersUpdate(w http.ResponseWriter, r *http.Request) {
+var UsersUpdate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 	var user models.User
@@ -51,10 +51,22 @@ func UsersUpdate(w http.ResponseWriter, r *http.Request) {
 	} else {
 		fmt.Println("User info is not valid")
 	}
-}
+})
 
-func UsersDelete(w http.ResponseWriter, r *http.Request) {
+var UsersDelete = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	models.DeleteUser(vars["id"])
 	fmt.Println("Deleted user")
-}
+})
+
+var UsersLogin = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var user models.User
+	b, _ := ioutil.ReadAll(r.Body)
+	json.Unmarshal(b, &user)
+	loginToken := models.LoginUser(user)
+	if loginToken != "" {
+		fmt.Println(loginToken)
+	} else {
+		fmt.Println("Could not log in")
+	}
+})

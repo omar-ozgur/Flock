@@ -36,7 +36,7 @@ func InitDB() {
            last_name text,
            email text,
            fb_id int,
-           password text,
+           password bytea,
            time_created timestamp DEFAULT now()
            );`)
 		utilities.CheckErr(err)
