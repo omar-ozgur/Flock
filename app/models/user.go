@@ -8,6 +8,7 @@ import (
 	"github.com/omar-ozgur/flock-api/db"
 	"github.com/omar-ozgur/flock-api/utilities"
 	"golang.org/x/crypto/bcrypt"
+	"os"
 	"reflect"
 	"time"
 )
@@ -200,7 +201,7 @@ func LoginUser(user User) string {
 		return ""
 	}
 
-	var secretKey = []byte("secret")
+	var secretKey = []byte(os.Getenv("FLOCK_TOKEN_SECRET"))
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 	claims["user_id"] = foundUser.Id

@@ -2,16 +2,16 @@ package utilities
 
 import (
 	"github.com/dgrijalva/jwt-go"
+	"os"
 )
 
-var secretKey = []byte("secret")
+var secretKey = []byte(os.Getenv("FLOCK_TOKEN_SECRET"))
 
 func GetClaims(tokenString string) map[string]interface{} {
 	if tokenString == "" {
 		return nil
 	}
 
-	tokenString = tokenString[len("Bearer "):]
 	token, _ := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return secretKey, nil
 	})

@@ -12,13 +12,14 @@ func InitRouter() (n *negroni.Negroni) {
 
 	authorizationHandler := middleware.JWTMiddleware.Handler
 	r.HandleFunc("/", controllers.PagesIndex).Methods("GET")
-	r.Handle("/users", authorizationHandler(controllers.UsersIndex)).Methods("GET")
-	r.Handle("/users", controllers.UsersCreate).Methods("POST")
-	r.Handle("/users/{id}", authorizationHandler(controllers.UsersShow)).Methods("GET")
+	r.Handle("/users", controllers.UsersIndex).Methods("GET")
+	r.Handle("/users", authorizationHandler(controllers.UsersCreate)).Methods("POST")
+	r.Handle("/users/{id}", controllers.UsersShow).Methods("GET")
 	r.Handle("/users/{id}", authorizationHandler(controllers.UsersUpdate)).Methods("PUT")
 	r.Handle("/users/{id}", authorizationHandler(controllers.UsersDelete)).Methods("DELETE")
 
 	r.Handle("/login", controllers.UsersLogin).Methods("Post")
+	r.Handle("/profile", authorizationHandler(controllers.UsersProfile)).Methods("Get")
 
 	r.HandleFunc("/posts", controllers.PostsIndex).Methods("GET")
 	r.HandleFunc("/posts", controllers.PostsCreate).Methods("POST")
