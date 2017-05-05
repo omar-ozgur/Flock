@@ -168,13 +168,11 @@ func GetUsers() []User {
 
 	// Print table
 	var users []User
-	fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v | %-20v\n", "id", "first_name", "last_name", "email", "fb_id", "password", "time_created")
 	for rows.Next() {
 		var user User
 		err = rows.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Password, &user.Time_created)
 		utilities.CheckErr(err)
 		users = append(users, user)
-		fmt.Printf(" %-5v | %-20v | %-20v | %-20v | %-20v | %-20v | %-20v\n", user.Id, user.First_name, user.Last_name, user.Email, user.Fb_id, user.Password, user.Time_created)
 	}
 
 	return users
@@ -205,8 +203,7 @@ func LoginUser(user User) string {
 	var secretKey = []byte("secret")
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
-	claims["id"] = user.Id
-	claims["email"] = user.email
+	claims["user_id"] = foundUser.Id
 	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
 	tokenString, _ := token.SignedString(secretKey)
 	return tokenString

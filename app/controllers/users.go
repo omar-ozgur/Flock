@@ -5,12 +5,17 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/omar-ozgur/flock-api/app/models"
+	"github.com/omar-ozgur/flock-api/utilities"
 	"io/ioutil"
 	"net/http"
 )
 
 var UsersIndex = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	claims := utilities.GetClaims(r.Header.Get("Authorization"))
+	fmt.Println(claims["user_id"])
+
 	users := models.GetUsers()
 	j, _ := json.Marshal(users)
 	w.Write(j)
