@@ -205,8 +205,7 @@ func LoginUser(user User) string {
 	var secretKey = []byte("secret")
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
-	claims["first_name"] = user.First_name
-	claims["last_name"] = user.Last_name
+	claims["id"] = user.Id
 	claims["email"] = user.email
 	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
 	tokenString, _ := token.SignedString(secretKey)
