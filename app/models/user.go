@@ -28,6 +28,7 @@ type User struct {
 const userTableName = "users"
 
 var UserAutoParams = map[string]bool{"Id": true, "Time_created": true}
+var UserUniqueParams = map[string]bool{"Email": true, "Fb_id": true}
 var UserRequiredParams = map[string]bool{"First_name": true, "Last_name": true, "Email": true, "Fb_id": true, "Password": true}
 
 func CreateUser(user User) (status string, message string, createdUser User) {
@@ -49,6 +50,22 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 	_, err = govalidator.ValidateStruct(user)
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to validate user: %s", err.Error()), User{}
+	}
+
+	// Check user uniqueness
+	uniqueMap := make(map[string]interface{})
+	for key, _ := range UserUniqueParams {
+		fieldValue, err := reflections.GetField(&user, key)
+		if err != nil {
+			return "error", fmt.Sprintf("Failed to get field: %s", err.Error()), User{}
+		}
+		uniqueMap[key] = fieldValue
+	}
+	status, message, retrievedUsers := SearchUsers(uniqueMap, "OR")
+	if status != "success" {
+		return "error", "Failed to check user uniqueness", User{}
+	} else if retrievedUsers != nil {
+		return "error", "User is not unique", User{}
 	}
 
 	// Create query string
@@ -240,4 +257,45 @@ func DeleteUser(id string) (status string, message string) {
 	}
 
 	return "success", "Deleted user"
+}
+
+func SearchUsers(parameters map[string]interface{}, operator string) (status string, message string, retrievedUsers []User) {
+
+	// Create query string
+	var queryStr bytes.Buffer
+
+	// Create and execute query
+	queryStr.WriteString(fmt.Sprintf("SELECT * FROM %s WHERE", userTableName))
+
+	// Set present column names and values
+	var first = true
+	for key, value := range parameters {
+		if !first {
+			queryStr.WriteString(fmt.Sprintf(" %s ", operator))
+		} else {
+			queryStr.WriteString(" ")
+			first = false
+		}
+		queryStr.WriteString(fmt.Sprintf("%v='%v'", key, value))
+	}
+
+	queryStr.WriteString(";")
+	utilities.Sugar.Infof("SQL Query: %s", queryStr.String())
+	rows, err := db.DB.Query(queryStr.String())
+	if err != nil {
+		return "error", "Failed to query users", nil
+	}
+
+	// Print table
+	var users []User
+	for rows.Next() {
+		var user User
+		err = rows.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Password, &user.Time_created)
+		if err != nil {
+			return "error", "Failed to retrieve user information", nil
+		}
+		users = append(users, user)
+	}
+
+	return "success", "Retrieved users", users
 }

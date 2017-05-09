@@ -6,6 +6,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/omar-ozgur/flock-api/db"
 	"github.com/omar-ozgur/flock-api/utilities"
+	"gopkg.in/oleiade/reflections.v1"
 	"reflect"
 )
 
@@ -18,6 +19,7 @@ type Attendee struct {
 const attendeeTableName = "attendees"
 
 var attendeeAutoParams = map[string]bool{"Id": true}
+var attendeeUniqueParams = map[string]bool{"Post_id": true, "User_id": true}
 var attendeeRequiredParams = map[string]bool{"Post_id": true, "User_id": true}
 
 func CreateAttendee(attendee Attendee) (status string, message string, createdAttendee Attendee) {
@@ -26,6 +28,22 @@ func CreateAttendee(attendee Attendee) (status string, message string, createdAt
 	value := reflect.ValueOf(attendee)
 	if value.NumField() <= len(attendeeRequiredParams) {
 		return "error", "Invalid attendee parameters", Attendee{}
+	}
+
+	// Check attendee uniqueness
+	uniqueMap := make(map[string]interface{})
+	for key, _ := range attendeeUniqueParams {
+		fieldValue, err := reflections.GetField(&attendee, key)
+		if err != nil {
+			return "error", fmt.Sprintf("Failed to get field: %s", err.Error()), Attendee{}
+		}
+		uniqueMap[key] = fieldValue
+	}
+	status, message, retrievedAttendees := SearchAttendees(uniqueMap, "AND")
+	if status != "success" {
+		return "error", "Failed to check attendee uniqueness", Attendee{}
+	} else if retrievedAttendees != nil {
+		return "error", "Attendee already exists", Attendee{}
 	}
 
 	// Create query string
@@ -114,4 +132,45 @@ func DeleteAttendee(attendee Attendee) (status string, message string) {
 	}
 
 	return "success", "Deleted attendee"
+}
+
+func SearchAttendees(parameters map[string]interface{}, operator string) (status string, message string, retrievedAttendees []Attendee) {
+
+	// Create query string
+	var queryStr bytes.Buffer
+
+	// Create and execute query
+	queryStr.WriteString(fmt.Sprintf("SELECT * FROM %s WHERE", attendeeTableName))
+
+	// Set present column names and values
+	var first = true
+	for key, value := range parameters {
+		if !first {
+			queryStr.WriteString(fmt.Sprintf(" %s ", operator))
+		} else {
+			queryStr.WriteString(" ")
+			first = false
+		}
+		queryStr.WriteString(fmt.Sprintf("%v='%v'", key, value))
+	}
+
+	queryStr.WriteString(";")
+	utilities.Sugar.Infof("SQL Query: %s", queryStr.String())
+	rows, err := db.DB.Query(queryStr.String())
+	if err != nil {
+		return "error", "Failed to query attendees", nil
+	}
+
+	// Print table
+	var attendees []Attendee
+	for rows.Next() {
+		var attendee Attendee
+		err = rows.Scan(&attendee.Id, &attendee.Post_id, &attendee.User_id)
+		if err != nil {
+			return "error", "Failed to retrieve attendee information", nil
+		}
+		attendees = append(attendees, attendee)
+	}
+
+	return "success", "Retrieved attendees", attendees
 }
