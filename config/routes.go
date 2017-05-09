@@ -28,7 +28,7 @@ func InitRouter() (n *negroni.Negroni) {
 	r.Handle("/posts/{id}", authorizationHandler(controllers.PostsUpdate)).Methods("PUT")
 	r.Handle("/posts/{id}", authorizationHandler(controllers.PostsDelete)).Methods("DELETE")
 
-	r.Handle("/posts/{id}/attendance", controllers.PostsAttendees).Methods("GET")
+	r.Handle("/posts/{id}/attendees", controllers.PostsAttendees).Methods("GET")
 	r.Handle("/posts/{id}/attend", authorizationHandler(controllers.PostsAttend)).Methods("POST")
 	r.Handle("/posts/{id}/attendance", authorizationHandler(controllers.PostsDeleteAttendance)).Methods("DELETE")
 
