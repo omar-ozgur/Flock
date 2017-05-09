@@ -77,6 +77,7 @@ var UsersShow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	vars := mux.Vars(r)
+
 	status, message, retrievedUser := models.GetUser(vars["id"])
 
 	JSON, _ := json.Marshal(map[string]interface{}{
