@@ -8,6 +8,7 @@ import (
 	"github.com/omar-ozgur/flock-api/db"
 	"github.com/omar-ozgur/flock-api/utilities"
 	"golang.org/x/crypto/bcrypt"
+	"gopkg.in/oleiade/reflections.v1"
 	"os"
 	"reflect"
 	"time"
@@ -28,12 +29,12 @@ const userTableName = "users"
 var UserAutoParams = map[string]bool{"Id": true, "Time_created": true}
 var UserRequiredParams = map[string]bool{"First_name": true, "Last_name": true, "Email": true, "Fb_id": true, "Password": true}
 
-func CreateUser(user User) bool {
+func CreateUser(user User) (status string, message string, createdUser User) {
 
 	// Get user fields
 	value := reflect.ValueOf(user)
 	if value.NumField() <= len(UserRequiredParams) {
-		return false
+		return "error", "Invalid user parameters", user
 	}
 
 	// Create query string
@@ -49,7 +50,7 @@ func CreateUser(user User) bool {
 			continue
 		}
 		if UserRequiredParams[name] && reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
-			return false
+			return "error", fmt.Sprintf("Field '%v' is not valid", value.Type().Field(i).Name), user
 		}
 		if !first {
 			queryStr.WriteString(", ")
@@ -64,6 +65,7 @@ func CreateUser(user User) bool {
 			values = append(values, fmt.Sprintf("%v", hash))
 		} else {
 			values = append(values, fmt.Sprintf("%v", value.Field(i).Interface()))
+			reflections.SetField(&user, value.Type().Field(i).Name, value.Field(i).Interface())
 		}
 	}
 
@@ -80,20 +82,86 @@ func CreateUser(user User) bool {
 	}
 
 	// Finish and execute query
-	queryStr.WriteString(")")
+	queryStr.WriteString(") returning id")
 	fmt.Println("SQL Query:", queryStr.String())
-	_, err := db.DB.Exec(queryStr.String())
+	err := db.DB.QueryRow(queryStr.String()).Scan(&user.Id)
 	utilities.CheckErr(err)
 
-	return true
+	return "success", "New user created", user
 }
 
-func UpdateUser(id string, user User) bool {
+func LoginUser(user User) (status string, message string, createdToken string) {
+	if user.Email == "" || len(user.Password) == 0 {
+		return "error", "Invalid login parameters", ""
+	}
+	var foundUser User
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE email='%s'", userTableName, user.Email)
+	fmt.Println("SQL Query:", queryStr)
+	row := db.DB.QueryRow(queryStr)
+	err := row.Scan(&foundUser.Id, &foundUser.First_name, &foundUser.Last_name, &foundUser.Email, &foundUser.Fb_id, &foundUser.Password, &foundUser.Time_created)
+	if err != nil {
+		return "error", "Error while retrieving user", ""
+	}
+	var hash []byte
+	hash, err = bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return "error", "Error while encrypting password", ""
+	}
+	err = bcrypt.CompareHashAndPassword(hash, user.Password)
+	if err != nil {
+		return "error", "Error while checking password", ""
+	}
+
+	var secretKey = []byte(os.Getenv("FLOCK_TOKEN_SECRET"))
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := token.Claims.(jwt.MapClaims)
+	claims["user_id"] = foundUser.Id
+	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
+	tokenString, _ := token.SignedString(secretKey)
+	return "success", "Login token generated", tokenString
+}
+
+func GetUser(id string) (status string, message string, retrievedUser User) {
+
+	// Create and execute query
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=%s", userTableName, id)
+	fmt.Println("SQL Query:", queryStr)
+	row := db.DB.QueryRow(queryStr)
+
+	// Get user info
+	var user User
+	err := row.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Password, &user.Time_created)
+	utilities.CheckErr(err)
+
+	return "success", "Retrieved user", user
+}
+
+func GetUsers() (status string, message string, retrievedUsers []User) {
+
+	// Create and execute query
+	queryStr := fmt.Sprintf("SELECT * FROM %s", userTableName)
+	fmt.Println("SQL Query:", queryStr)
+	rows, err := db.DB.Query(queryStr)
+	utilities.CheckErr(err)
+
+	// Print table
+	var users []User
+	for rows.Next() {
+		var user User
+		err = rows.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Password, &user.Time_created)
+		utilities.CheckErr(err)
+		users = append(users, user)
+	}
+
+	return "success", "Retrieved users", users
+}
+
+func UpdateUser(id string, user User) (status string, message string, updatedUser User) {
 
 	// Get user fields
 	value := reflect.ValueOf(user)
 	if value.NumField() <= 0 {
-		return false
+		return "error", "Invalid number of fields", user
 	}
 
 	// Create query string
@@ -132,80 +200,16 @@ func UpdateUser(id string, user User) bool {
 	_, err := db.DB.Exec(queryStr.String())
 	utilities.CheckErr(err)
 
-	return true
+	return "success", "Updated user", user
 }
 
-func DeleteUser(id string) {
+func DeleteUser(id string) (status string, message string) {
 
 	// Create and execute query
 	queryStr := fmt.Sprintf("DELETE FROM %s WHERE id=%s", userTableName, id)
 	fmt.Println("SQL Query:", queryStr)
 	_, err := db.DB.Exec(queryStr)
 	utilities.CheckErr(err)
-}
 
-func GetUser(id string) User {
-
-	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=%s", userTableName, id)
-	fmt.Println("SQL Query:", queryStr)
-	row := db.DB.QueryRow(queryStr)
-
-	// Get user info
-	var user User
-	err := row.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Password, &user.Time_created)
-	utilities.CheckErr(err)
-
-	return user
-}
-
-func GetUsers() []User {
-
-	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s", userTableName)
-	fmt.Println("SQL Query:", queryStr)
-	rows, err := db.DB.Query(queryStr)
-	utilities.CheckErr(err)
-
-	// Print table
-	var users []User
-	for rows.Next() {
-		var user User
-		err = rows.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Password, &user.Time_created)
-		utilities.CheckErr(err)
-		users = append(users, user)
-	}
-
-	return users
-}
-
-func LoginUser(user User) string {
-	if user.Email == "" || len(user.Password) == 0 {
-		return ""
-	}
-	var foundUser User
-	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE email='%s'", userTableName, user.Email)
-	fmt.Println("SQL Query:", queryStr)
-	row := db.DB.QueryRow(queryStr)
-	err := row.Scan(&foundUser.Id, &foundUser.First_name, &foundUser.Last_name, &foundUser.Email, &foundUser.Fb_id, &foundUser.Password, &foundUser.Time_created)
-	if err != nil {
-		return ""
-	}
-	var hash []byte
-	hash, err = bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return ""
-	}
-	err = bcrypt.CompareHashAndPassword(hash, user.Password)
-	if err != nil {
-		return ""
-	}
-
-	var secretKey = []byte(os.Getenv("FLOCK_TOKEN_SECRET"))
-	token := jwt.New(jwt.SigningMethodHS256)
-	claims := token.Claims.(jwt.MapClaims)
-	claims["user_id"] = foundUser.Id
-	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
-	tokenString, _ := token.SignedString(secretKey)
-	return tokenString
+	return "success", "Deleted user"
 }
