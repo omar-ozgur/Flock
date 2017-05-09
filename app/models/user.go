@@ -168,13 +168,18 @@ func LoginUser(user User) (status string, message string, createdToken string) {
 func GetUser(id string) (status string, message string, retrievedUser User) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id='%s';", userTableName, id)
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=$1;", userTableName)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
-	row := db.DB.QueryRow(queryStr)
+	utilities.Sugar.Infof("Values: %v", id)
+	stmt, err := db.DB.Prepare(queryStr)
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), User{}
+	}
+	row := stmt.QueryRow(id)
 
 	// Get user info
 	var user User
-	err := row.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Password, &user.Time_created)
+	err = row.Scan(&user.Id, &user.First_name, &user.Last_name, &user.Email, &user.Fb_id, &user.Password, &user.Time_created)
 	if err != nil {
 		return "error", "Failed to retrieve user information", User{}
 	}
@@ -237,13 +242,16 @@ func UpdateUser(id string, user User) (status string, message string, updatedUse
 	queryStr.WriteString(fmt.Sprintf("UPDATE %s SET", userTableName))
 
 	// Set present column names and values
+	var values []interface{}
+	parameterIndex := 1
 	var first = true
 	for i := 0; i < value.NumField(); i++ {
-		name := value.Type().Field(i).Name
-		if UserAutoParams[name] {
+		fieldName := value.Type().Field(i).Name
+		fieldValue := value.Field(i).Interface()
+		if UserAutoParams[fieldName] {
 			continue
 		}
-		if reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
+		if reflect.DeepEqual(fieldValue, reflect.Zero(reflect.TypeOf(fieldValue)).Interface()) {
 			continue
 		}
 		if !first {
@@ -252,25 +260,37 @@ func UpdateUser(id string, user User) (status string, message string, updatedUse
 			queryStr.WriteString(" ")
 			first = false
 		}
-		if name == "Password" {
-			hash, err := bcrypt.GenerateFromPassword([]byte(value.Field(i).Interface().(string)), bcrypt.DefaultCost)
+		if fieldName == "Password" {
+			hash, err := bcrypt.GenerateFromPassword([]byte(fieldValue.(string)), bcrypt.DefaultCost)
 			if err != nil {
 				return "error", "Failed to encrypt password", User{}
 			}
-			queryStr.WriteString(fmt.Sprintf("%v='%v'", value.Type().Field(i).Name, hash))
+			queryStr.WriteString(fmt.Sprintf("%v=$%d", fieldName, parameterIndex))
+			values = append(values, hash)
 		} else {
-			queryStr.WriteString(fmt.Sprintf("%v='%v'", value.Type().Field(i).Name, value.Field(i).Interface()))
+			queryStr.WriteString(fmt.Sprintf("%v=$%d", fieldName, parameterIndex))
+			values = append(values, fieldValue)
 		}
+		parameterIndex += 1
 	}
 
 	// Finish and execute query
-	queryStr.WriteString(fmt.Sprintf(" WHERE id='%s';", id))
+	queryStr.WriteString(fmt.Sprintf(" WHERE id=$%d;", parameterIndex))
+	values = append(values, id)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr.String())
-	_, err := db.DB.Exec(queryStr.String())
+	utilities.Sugar.Infof("Values: %v", values)
+	stmt, err := db.DB.Prepare(queryStr.String())
 	if err != nil {
-		return "error", "Failed to update user", User{}
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), User{}
 	}
 
+	// Execute query
+	_, err = stmt.Exec(values...)
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to update user: %s", err.Error()), User{}
+	}
+
+	// Get update user
 	status, message, retrievedUser := GetUser(id)
 	if status == "success" {
 		return "success", "Updated user", retrievedUser
@@ -282,9 +302,14 @@ func UpdateUser(id string, user User) (status string, message string, updatedUse
 func DeleteUser(id string) (status string, message string) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("DELETE FROM %s WHERE id=%s;", userTableName, id)
+	queryStr := fmt.Sprintf("DELETE FROM %s WHERE id=$1;", userTableName)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
-	_, err := db.DB.Exec(queryStr)
+	utilities.Sugar.Infof("Values: %v", id)
+	stmt, err := db.DB.Prepare(queryStr)
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error())
+	}
+	_, err = stmt.Exec(id)
 	if err != nil {
 		return "error", "Failed to delete user"
 	}
@@ -301,6 +326,8 @@ func SearchUsers(parameters map[string]interface{}, operator string) (status str
 	queryStr.WriteString(fmt.Sprintf("SELECT * FROM %s WHERE", userTableName))
 
 	// Set present column names and values
+	var values []interface{}
+	parameterIndex := 1
 	var first = true
 	for key, value := range parameters {
 		if !first {
@@ -309,17 +336,25 @@ func SearchUsers(parameters map[string]interface{}, operator string) (status str
 			queryStr.WriteString(" ")
 			first = false
 		}
-		queryStr.WriteString(fmt.Sprintf("%v='%v'", key, value))
+		queryStr.WriteString(fmt.Sprintf("%v=$%d", key, parameterIndex))
+		values = append(values, value)
+		parameterIndex += 1
 	}
 
+	// Finish and execute query
 	queryStr.WriteString(";")
 	utilities.Sugar.Infof("SQL Query: %s", queryStr.String())
-	rows, err := db.DB.Query(queryStr.String())
+	utilities.Sugar.Infof("Values: %v", values)
+	stmt, err := db.DB.Prepare(queryStr.String())
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), nil
+	}
+	rows, err := stmt.Query(values...)
 	if err != nil {
 		return "error", "Failed to query users", nil
 	}
 
-	// Print table
+	// Return users
 	var users []User
 	for rows.Next() {
 		var user User

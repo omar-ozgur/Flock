@@ -96,6 +96,19 @@ var UsersUpdate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	b, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(b, &user)
 
+	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
+	current_user_id := fmt.Sprintf("%v", claims["user_id"])
+
+	if vars["id"] != current_user_id {
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  "error",
+			"message": "You do not have permission to update this user",
+			"user":    models.User{},
+		})
+		w.Write(JSON)
+		return
+	}
+
 	status, message, updatedUser := models.UpdateUser(vars["id"], user)
 
 	JSON, _ := json.Marshal(map[string]interface{}{
@@ -110,6 +123,18 @@ var UsersDelete = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 
 	vars := mux.Vars(r)
+
+	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
+	current_user_id := fmt.Sprintf("%v", claims["user_id"])
+
+	if vars["id"] != current_user_id {
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  "error",
+			"message": "You do not have permission to delete this user",
+		})
+		w.Write(JSON)
+		return
+	}
 
 	status, message := models.DeleteUser(vars["id"])
 
