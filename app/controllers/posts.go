@@ -81,6 +81,20 @@ var PostsUpdate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 
 	vars := mux.Vars(r)
 
+	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
+	current_user_id := fmt.Sprintf("%v", claims["user_id"])
+
+	status, message, retrievedPost := models.GetPost(vars["id"])
+
+	if current_user_id != fmt.Sprintf("%v", retrievedPost.User_id) {
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  "error",
+			"message": "You do not have permission to edit this post",
+		})
+		w.Write(JSON)
+		return
+	}
+
 	var post models.Post
 	b, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(b, &post)
@@ -100,7 +114,21 @@ var PostsDelete = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 
 	vars := mux.Vars(r)
 
-	status, message := models.DeletePost(vars["id"])
+	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
+	current_user_id := fmt.Sprintf("%v", claims["user_id"])
+
+	status, message, retrievedPost := models.GetPost(vars["id"])
+
+	if current_user_id != fmt.Sprintf("%v", retrievedPost.User_id) {
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  "error",
+			"message": "You do not have permission to delete this post",
+		})
+		w.Write(JSON)
+		return
+	}
+
+	status, message = models.DeletePost(vars["id"])
 
 	JSON, _ := json.Marshal(map[string]interface{}{
 		"status":  status,
