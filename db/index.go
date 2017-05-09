@@ -49,8 +49,8 @@ func InitDB() {
            title text,
            location text,
            user_id int,
-           latitude double precision,
-           longitude double precision,
+           latitude text,
+           longitude text,
            zip int,           
            time_created timestamp DEFAULT now(),
            time_expires timestamp DEFAULT now()

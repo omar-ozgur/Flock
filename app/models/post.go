@@ -3,6 +3,7 @@ package models
 import (
 	"bytes"
 	"fmt"
+	"github.com/asaskevich/govalidator"
 	_ "github.com/lib/pq"
 	"github.com/omar-ozgur/flock-api/db"
 	"github.com/omar-ozgur/flock-api/utilities"
@@ -13,15 +14,15 @@ import (
 )
 
 type Post struct {
-	Id           int
-	Title        string
-	Location     string
-	User_id      int
-	Latitude     float64
-	Longitude    float64
-	Zip          int
-	Time_created time.Time
-	Time_expires time.Time
+	Id           int       `valid:"-"`
+	Title        string    `valid:"alphanum,required"`
+	Location     string    `valid:"alphanum,required"`
+	User_id      int       `valid:"required"`
+	Latitude     string    `valid:"latitude,required"`
+	Longitude    string    `valid:"longitude,required"`
+	Zip          int       `valid:"required"`
+	Time_created time.Time `valid:"-"`
+	Time_expires time.Time `valid:"-"`
 }
 
 const postTableName = "posts"
@@ -34,12 +35,16 @@ func GetPosts() (status string, message string, retrievedPosts []Post) {
 	// Create and execute query
 	queryStr := fmt.Sprintf("SELECT * FROM %s;", postTableName)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
-	rows, err := db.DB.Query(queryStr)
+	stmt, err := db.DB.Prepare(queryStr)
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), nil
+	}
+	rows, err := stmt.Query()
 	if err != nil {
 		return "error", "Failed to query posts", nil
 	}
 
-	// Print table
+	// Get post info
 	var posts []Post
 	for rows.Next() {
 		var post Post
@@ -61,10 +66,17 @@ func CreatePost(userId string, post Post) (status string, message string, create
 		return "error", "Invalid post parameters", Post{}
 	}
 
+	// Convert user ID to integer
 	var err error
 	post.User_id, err = strconv.Atoi(userId)
 	if err != nil {
 		return "error", "Invalid user ID", Post{}
+	}
+
+	// Validate user
+	_, err = govalidator.ValidateStruct(post)
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to validate post: %s", err.Error()), Post{}
 	}
 
 	// Create query string
@@ -72,39 +84,39 @@ func CreatePost(userId string, post Post) (status string, message string, create
 	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (", postTableName))
 
 	// Set present column names
-	var values []string
+	var valuesStr bytes.Buffer
+	var values []interface{}
+	parameterIndex := 1
 	queryStr.WriteString("User_id")
+	valuesStr.WriteString(fmt.Sprintf("$%d", parameterIndex))
+	parameterIndex += 1
 	values = append(values, userId)
 	for i := 0; i < value.NumField(); i++ {
-		name := value.Type().Field(i).Name
-		if postAutoParams[name] {
+		fieldName := value.Type().Field(i).Name
+		fieldValue := fmt.Sprintf("%v", value.Field(i).Interface())
+		if postAutoParams[fieldName] {
 			continue
 		}
-		if postRequiredParams[name] && reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
-			return "error", fmt.Sprintf("Field '%v' is not valid", value.Type().Field(i).Name), Post{}
+		if postRequiredParams[fieldName] && reflect.DeepEqual(fieldValue, reflect.Zero(reflect.TypeOf(fieldValue)).Interface()) {
+			return "error", fmt.Sprintf("Field '%v' is not valid", fieldName), Post{}
 		}
-		queryStr.WriteString(", ")
-		queryStr.WriteString(fmt.Sprintf("%v", value.Type().Field(i).Name))
-		values = append(values, fmt.Sprintf("%v", value.Field(i).Interface()))
+		queryStr.WriteString(fmt.Sprintf(", %v", fieldName))
+		valuesStr.WriteString(fmt.Sprintf(", $%d", parameterIndex))
+		values = append(values, fmt.Sprintf("%v", fieldValue))
 		reflections.SetField(&post, value.Type().Field(i).Name, value.Field(i).Interface())
-	}
-
-	// Set present column values
-	queryStr.WriteString(") VALUES(")
-	first := true
-	for i := 0; i < len(values); i++ {
-		if !first {
-			queryStr.WriteString(", ")
-		} else {
-			first = false
-		}
-		queryStr.WriteString(fmt.Sprintf("'%v'", values[i]))
+		parameterIndex += 1
 	}
 
 	// Finish and execute query
+	queryStr.WriteString(fmt.Sprintf(") VALUES(%s", valuesStr.String()))
 	queryStr.WriteString(") returning id;")
 	utilities.Sugar.Infof("SQL Query: %s", queryStr.String())
-	err = db.DB.QueryRow(queryStr.String()).Scan(&post.Id)
+	utilities.Sugar.Infof("Values: %v", values)
+	stmt, err := db.DB.Prepare(queryStr.String())
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), Post{}
+	}
+	err = stmt.QueryRow(values...).Scan(&post.Id)
 	if err != nil {
 		return "error", "Failed to create new post", Post{}
 	}
@@ -124,8 +136,6 @@ func SearchPosts(post Post) (status string, message string, retrievedPosts []Pos
 
 	// Create query string
 	var queryStr bytes.Buffer
-
-	// Create and execute query
 	queryStr.WriteString(fmt.Sprintf("SELECT * FROM %s WHERE", postTableName))
 
 	// Get post fields
@@ -135,9 +145,13 @@ func SearchPosts(post Post) (status string, message string, retrievedPosts []Pos
 	}
 
 	// Set present column names and values
+	var values []interface{}
+	parameterIndex := 1
 	var first = true
 	for i := 0; i < value.NumField(); i++ {
-		if reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
+		fieldName := value.Type().Field(i).Name
+		fieldValue := value.Field(i).Interface()
+		if reflect.DeepEqual(fieldValue, reflect.Zero(reflect.TypeOf(fieldValue)).Interface()) {
 			continue
 		}
 		if !first {
@@ -146,12 +160,25 @@ func SearchPosts(post Post) (status string, message string, retrievedPosts []Pos
 			queryStr.WriteString(" ")
 			first = false
 		}
-		queryStr.WriteString(fmt.Sprintf("%v='%v'", value.Type().Field(i).Name, value.Field(i).Interface()))
+		queryStr.WriteString(fmt.Sprintf("%v=$%d", fieldName, parameterIndex))
+		values = append(values, fieldValue)
+		parameterIndex += 1
 	}
 
+	// Check if any fields are valid
+	if len(values) <= 0 {
+		return "error", "No valid fields were found", nil
+	}
+
+	// Finish and execute query
 	queryStr.WriteString(";")
 	utilities.Sugar.Infof("SQL Query: %s", queryStr.String())
-	rows, err := db.DB.Query(queryStr.String())
+	utilities.Sugar.Infof("Values: %v", values)
+	stmt, err := db.DB.Prepare(queryStr.String())
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), nil
+	}
+	rows, err := stmt.Query(values...)
 	if err != nil {
 		return "error", "Failed to query posts", nil
 	}
@@ -173,13 +200,18 @@ func SearchPosts(post Post) (status string, message string, retrievedPosts []Pos
 func GetPost(id string) (status string, message string, retrievedPost Post) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=%s;", postTableName, id)
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=$1;", postTableName)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
-	row := db.DB.QueryRow(queryStr)
+	utilities.Sugar.Infof("Values: %v", id)
+	stmt, err := db.DB.Prepare(queryStr)
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), Post{}
+	}
+	row := stmt.QueryRow(id)
 
 	// Get post info
 	var post Post
-	err := row.Scan(&post.Id, &post.Title, &post.Location, &post.User_id, &post.Latitude, &post.Longitude, &post.Zip, &post.Time_created, &post.Time_expires)
+	err = row.Scan(&post.Id, &post.Title, &post.Location, &post.User_id, &post.Latitude, &post.Longitude, &post.Zip, &post.Time_created, &post.Time_expires)
 	if err != nil {
 		return "error", "Failed to retrieve post information", Post{}
 	}
@@ -200,13 +232,16 @@ func UpdatePost(id string, post Post) (status string, message string, updatedPos
 	queryStr.WriteString(fmt.Sprintf("UPDATE %s SET", postTableName))
 
 	// Set present column names and values
+	var values []interface{}
+	parameterIndex := 1
 	var first = true
 	for i := 0; i < value.NumField(); i++ {
-		name := value.Type().Field(i).Name
-		if postAutoParams[name] {
+		fieldName := value.Type().Field(i).Name
+		fieldValue := value.Field(i).Interface()
+		if postAutoParams[fieldName] {
 			continue
 		}
-		if reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
+		if reflect.DeepEqual(fieldValue, reflect.Zero(reflect.TypeOf(fieldValue)).Interface()) {
 			continue
 		}
 		if !first {
@@ -215,13 +250,21 @@ func UpdatePost(id string, post Post) (status string, message string, updatedPos
 			queryStr.WriteString(" ")
 			first = false
 		}
-		queryStr.WriteString(fmt.Sprintf("%v='%v'", value.Type().Field(i).Name, value.Field(i).Interface()))
+		queryStr.WriteString(fmt.Sprintf("%v=$%d", fieldName, parameterIndex))
+		values = append(values, fieldValue)
+		parameterIndex += 1
 	}
 
 	// Finish and execute query
-	queryStr.WriteString(fmt.Sprintf(" WHERE id='%s';", id))
+	queryStr.WriteString(fmt.Sprintf(" WHERE id=$%d;", parameterIndex))
+	values = append(values, id)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr.String())
-	_, err := db.DB.Exec(queryStr.String())
+	utilities.Sugar.Infof("Values: %v", values)
+	stmt, err := db.DB.Prepare(queryStr.String())
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), Post{}
+	}
+	_, err = stmt.Exec(values...)
 	if err != nil {
 		return "error", "Failed to update post", Post{}
 	}
@@ -237,9 +280,14 @@ func UpdatePost(id string, post Post) (status string, message string, updatedPos
 func DeletePost(id string) (status string, message string) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("DELETE FROM %s WHERE id=%s;", postTableName, id)
+	queryStr := fmt.Sprintf("DELETE FROM %s WHERE id=$1;", postTableName)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
-	_, err := db.DB.Exec(queryStr)
+	utilities.Sugar.Infof("Values: %v", id)
+	stmt, err := db.DB.Prepare(queryStr)
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error())
+	}
+	_, err = stmt.Exec(id)
 	if err != nil {
 		return "error", "Failed to delete post"
 	}

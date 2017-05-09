@@ -197,7 +197,7 @@ func GetUsers() (status string, message string, retrievedUsers []User) {
 		return "error", "Failed to query users", nil
 	}
 
-	// Print table
+	// Get user info
 	var users []User
 	for rows.Next() {
 		var user User
