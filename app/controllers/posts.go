@@ -8,6 +8,7 @@ import (
 	"github.com/omar-ozgur/flock-api/utilities"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 )
 
 var PostsIndex = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -60,6 +61,7 @@ var PostsShow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 var PostsUpdate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
 	vars := mux.Vars(r)
 
 	var post models.Post
@@ -82,6 +84,70 @@ var PostsDelete = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	vars := mux.Vars(r)
 
 	status, message := models.DeletePost(vars["id"])
+
+	JSON, _ := json.Marshal(map[string]interface{}{
+		"status":  status,
+		"message": message,
+	})
+	w.Write(JSON)
+})
+
+var PostsAttendees = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+
+	var post models.Post
+	b, _ := ioutil.ReadAll(r.Body)
+	json.Unmarshal(b, &post)
+
+	status, message, retrievedAttendees := models.GetPostAttendees(vars["id"])
+
+	JSON, _ := json.Marshal(map[string]interface{}{
+		"status":    status,
+		"message":   message,
+		"attendees": retrievedAttendees,
+	})
+	w.Write(JSON)
+})
+
+var PostsAttend = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
+	current_user_id := fmt.Sprintf("%v", claims["user_id"])
+
+	vars := mux.Vars(r)
+
+	postId, _ := strconv.Atoi(vars["id"])
+	userId, _ := strconv.Atoi(current_user_id)
+
+	attendee := models.Attendee{Post_id: postId, User_id: userId}
+
+	status, message, createdAttendee := models.CreateAttendee(attendee)
+
+	JSON, _ := json.Marshal(map[string]interface{}{
+		"status":   status,
+		"message":  message,
+		"attendee": createdAttendee,
+	})
+	w.Write(JSON)
+})
+
+var PostsDeleteAttendance = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
+	current_user_id := fmt.Sprintf("%v", claims["user_id"])
+
+	vars := mux.Vars(r)
+
+	postId, _ := strconv.Atoi(vars["id"])
+	userId, _ := strconv.Atoi(current_user_id)
+
+	attendee := models.Attendee{Post_id: postId, User_id: userId}
+
+	status, message := models.DeleteAttendee(attendee)
 
 	JSON, _ := json.Marshal(map[string]interface{}{
 		"status":  status,

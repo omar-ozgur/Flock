@@ -104,17 +104,20 @@ func CreatePost(userId string, post Post) (status string, message string, create
 	// Finish and execute query
 	queryStr.WriteString(") returning id;")
 	utilities.Sugar.Infof("SQL Query: %s", queryStr.String())
-	var lastInsertId int
 	err = db.DB.QueryRow(queryStr.String()).Scan(&post.Id)
 	if err != nil {
 		return "error", "Failed to create new post", Post{}
 	}
 
 	// Create attendee
-	attendee := Attendee{Post_id: lastInsertId, User_id: post.User_id}
-	CreateAttendee(attendee)
-
-	return "success", "New post created", post
+	attendee := Attendee{Post_id: post.Id, User_id: post.User_id}
+	fmt.Println(attendee)
+	status, _, _ = CreateAttendee(attendee)
+	if status == "success" {
+		return "success", "New post created", post
+	} else {
+		return "error", "Failed to add attendee to new post", Post{}
+	}
 }
 
 func GetPost(id string) (status string, message string, retrievedPost Post) {

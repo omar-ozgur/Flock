@@ -20,12 +20,12 @@ const attendeeTableName = "attendees"
 var attendeeAutoParams = map[string]bool{"Id": true}
 var attendeeRequiredParams = map[string]bool{"Post_id": true, "User_id": true}
 
-func CreateAttendee(attendee Attendee) bool {
+func CreateAttendee(attendee Attendee) (status string, message string, createdAttendee Attendee) {
 
 	// Get attendee fields
 	value := reflect.ValueOf(attendee)
 	if value.NumField() <= len(attendeeRequiredParams) {
-		return false
+		return "error", "Invalid attendee parameters", Attendee{}
 	}
 
 	// Create query string
@@ -41,7 +41,7 @@ func CreateAttendee(attendee Attendee) bool {
 			continue
 		}
 		if attendeeRequiredParams[name] && reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
-			return false
+			return "error", fmt.Sprintf("Field '%v' is not valid", value.Type().Field(i).Name), Attendee{}
 		}
 		if !first {
 			queryStr.WriteString(", ")
@@ -65,96 +65,53 @@ func CreateAttendee(attendee Attendee) bool {
 	}
 
 	// Finish and execute query
-	queryStr.WriteString(")")
-	fmt.Println("SQL Query:", queryStr.String())
-	_, err := db.DB.Exec(queryStr.String())
-	utilities.CheckErr(err)
-
-	return true
-}
-
-func UpdateAttendee(id string, attendee Attendee) bool {
-
-	// Get attendee fields
-	value := reflect.ValueOf(attendee)
-	if value.NumField() <= 0 {
-		return false
+	queryStr.WriteString(") returning id;")
+	utilities.Sugar.Infof("SQL Query: %s", queryStr.String())
+	err := db.DB.QueryRow(queryStr.String()).Scan(&attendee.Id)
+	if err != nil {
+		return "error", "Failed to create new attendee", Attendee{}
 	}
 
-	// Create query string
-	var queryStr bytes.Buffer
-	queryStr.WriteString(fmt.Sprintf("UPDATE %s SET", attendeeTableName))
-
-	// Set present column names and values
-	var first = true
-	for i := 0; i < value.NumField(); i++ {
-		name := value.Type().Field(i).Name
-		if attendeeAutoParams[name] {
-			continue
-		}
-		if reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
-			continue
-		}
-		if !first {
-			queryStr.WriteString(", ")
-		} else {
-			queryStr.WriteString(" ")
-			first = false
-		}
-		queryStr.WriteString(fmt.Sprintf("%v='%v'", value.Type().Field(i).Name, value.Field(i).Interface()))
-	}
-
-	// Finish and execute query
-	queryStr.WriteString(fmt.Sprintf(" WHERE id='%s'", id))
-	fmt.Println("SQL Query:", queryStr.String())
-	_, err := db.DB.Exec(queryStr.String())
-	utilities.CheckErr(err)
-
-	return true
+	return "success", "New attendee created", attendee
 }
 
-func DeleteAttendee(id string) {
+func GetPostAttendees(postId string) (status string, message string, retrievedUsers []User) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("DELETE FROM %s WHERE id=%s", attendeeTableName, id)
-	fmt.Println("SQL Query:", queryStr)
-	_, err := db.DB.Exec(queryStr)
-	utilities.CheckErr(err)
-}
-
-func GetAttendee(id string) Attendee {
-
-	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=%s", attendeeTableName, id)
-	fmt.Println("SQL Query:", queryStr)
-	row := db.DB.QueryRow(queryStr)
-
-	// Get attendee info
-	var attendee Attendee
-	err := row.Scan(&attendee.Id, &attendee.Post_id, &attendee.User_id)
-	utilities.CheckErr(err)
-
-	return attendee
-}
-
-func GetAttendees() []Attendee {
-
-	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s", attendeeTableName)
-	fmt.Println("SQL Query:", queryStr)
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE post_id='%s';", attendeeTableName, postId)
+	utilities.Sugar.Infof("SQL Query: %s", queryStr)
 	rows, err := db.DB.Query(queryStr)
-	utilities.CheckErr(err)
+	if err != nil {
+		return "error", "Failed to query attendees", nil
+	}
 
 	// Print table
-	var attendees []Attendee
-	fmt.Printf(" %-5v | %-10v | %-10v\n", "id", "post_id", "user_id")
+	var users []User
 	for rows.Next() {
 		var attendee Attendee
 		err = rows.Scan(&attendee.Id, &attendee.Post_id, &attendee.User_id)
-		utilities.CheckErr(err)
-		attendees = append(attendees, attendee)
-		fmt.Printf(" %-5v | %-10v | %-10v\n", attendee.Id, attendee.Post_id, attendee.User_id)
+		if err != nil {
+			return "error", "Failed to retrieve attendee information", nil
+		}
+		status, _, retrievedUser := GetUser(fmt.Sprintf("%v", attendee.User_id))
+		if status != "success" {
+			return "error", "Failed to retrieve attendee user information", nil
+		}
+		users = append(users, retrievedUser)
 	}
 
-	return attendees
+	return "success", "Retrieved attendee user information", users
+}
+
+func DeleteAttendee(attendee Attendee) (status string, message string) {
+
+	// Create and execute query
+	queryStr := fmt.Sprintf("DELETE FROM %s WHERE post_id='%d' AND user_id='%d';", attendeeTableName, attendee.Post_id, attendee.User_id)
+	utilities.Sugar.Infof("SQL Query: %s", queryStr)
+	_, err := db.DB.Exec(queryStr)
+	if err != nil {
+		return "error", "Failed to delete attendee"
+	}
+
+	return "success", "Deleted attendee"
 }
