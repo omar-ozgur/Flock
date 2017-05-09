@@ -50,7 +50,7 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 			continue
 		}
 		if UserRequiredParams[name] && reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
-			return "error", fmt.Sprintf("Field '%v' is not valid", value.Type().Field(i).Name), user
+			return "error", fmt.Sprintf("Field '%v' is not valid", value.Type().Field(i).Name), User{}
 		}
 		if !first {
 			queryStr.WriteString(", ")

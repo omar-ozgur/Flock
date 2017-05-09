@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/omar-ozgur/flock-api/app/models"
+	"github.com/omar-ozgur/flock-api/utilities"
 	"io/ioutil"
 	"net/http"
 )
@@ -12,27 +13,34 @@ import (
 var PostsIndex = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	posts := models.GetPosts()
+	status, message, retrievedPosts := models.GetPosts()
 
-	j, _ := json.Marshal(posts)
-	w.Write(j)
-	fmt.Println("Retrieved posts")
+	JSON, _ := json.Marshal(map[string]interface{}{
+		"status":  status,
+		"message": message,
+		"posts":   retrievedPosts,
+	})
+	w.Write(JSON)
 })
 
 var PostsCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
+	current_user_id := fmt.Sprintf("%v", claims["user_id"])
+
 	var post models.Post
 	b, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(b, &post)
 
-	status := models.CreatePost(post)
+	status, message, createdPost := models.CreatePost(current_user_id, post)
 
-	if status == true {
-		fmt.Println("Created new post")
-	} else {
-		fmt.Println("New post is not valid")
-	}
+	JSON, _ := json.Marshal(map[string]interface{}{
+		"status":  status,
+		"message": message,
+		"post":    createdPost,
+	})
+	w.Write(JSON)
 })
 
 var PostsShow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -40,11 +48,14 @@ var PostsShow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	post := models.GetPost(vars["id"])
+	status, message, retrievedPost := models.GetPost(vars["id"])
 
-	j, _ := json.Marshal(post)
-	w.Write(j)
-	fmt.Println("Retrieved post")
+	JSON, _ := json.Marshal(map[string]interface{}{
+		"status":  status,
+		"message": message,
+		"post":    retrievedPost,
+	})
+	w.Write(JSON)
 })
 
 var PostsUpdate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -55,13 +66,14 @@ var PostsUpdate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	b, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(b, &post)
 
-	status := models.UpdatePost(vars["id"], post)
+	status, message, updatedPost := models.UpdatePost(vars["id"], post)
 
-	if status == true {
-		fmt.Println("Updated post")
-	} else {
-		fmt.Println("Post info is not valid")
-	}
+	JSON, _ := json.Marshal(map[string]interface{}{
+		"status":  status,
+		"message": message,
+		"post":    updatedPost,
+	})
+	w.Write(JSON)
 })
 
 var PostsDelete = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +81,11 @@ var PostsDelete = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 
 	vars := mux.Vars(r)
 
-	models.DeletePost(vars["id"])
+	status, message := models.DeletePost(vars["id"])
 
-	fmt.Println("Deleted post")
+	JSON, _ := json.Marshal(map[string]interface{}{
+		"status":  status,
+		"message": message,
+	})
+	w.Write(JSON)
 })
