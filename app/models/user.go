@@ -3,6 +3,7 @@ package models
 import (
 	"bytes"
 	"fmt"
+	"github.com/asaskevich/govalidator"
 	"github.com/dgrijalva/jwt-go"
 	_ "github.com/lib/pq"
 	"github.com/omar-ozgur/flock-api/db"
@@ -15,13 +16,13 @@ import (
 )
 
 type User struct {
-	Id           int
-	First_name   string
-	Last_name    string
-	Email        string
-	Fb_id        int
-	Password     []byte
-	Time_created time.Time
+	Id           int       `valid:"-"`
+	First_name   string    `valid:"alphanum,required"`
+	Last_name    string    `valid:"alphanum,required"`
+	Email        string    `valid:"email,required"`
+	Fb_id        int       `valid:"-"`
+	Password     []byte    `valid:"required"`
+	Time_created time.Time `valid:"-"`
 }
 
 const userTableName = "users"
@@ -34,7 +35,20 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 	// Get user fields
 	value := reflect.ValueOf(user)
 	if value.NumField() <= len(UserRequiredParams) {
-		return "error", "Invalid user parameters", User{}
+		return "error", "Invalid number of user parameters", User{}
+	}
+
+	// Encrypt password
+	hash, err := bcrypt.GenerateFromPassword(user.Password, bcrypt.DefaultCost)
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to encrypt password: %s", err.Error()), User{}
+	}
+	reflections.SetField(&user, "Password", hash)
+
+	// Validate user
+	_, err = govalidator.ValidateStruct(user)
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to validate user: %s", err.Error()), User{}
 	}
 
 	// Create query string
@@ -42,55 +56,50 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (", userTableName))
 
 	// Set present column names
+	var fieldsStr, valuesStr bytes.Buffer
+	var values []interface{}
+	parameterIndex := 1
 	var first = true
-	var values []string
 	for i := 0; i < value.NumField(); i++ {
-		name := value.Type().Field(i).Name
-		if UserAutoParams[name] {
+		fieldName := value.Type().Field(i).Name
+		fieldValue := fmt.Sprintf("%v", value.Field(i).Interface())
+		if UserAutoParams[fieldName] {
 			continue
 		}
-		if UserRequiredParams[name] && reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
-			return "error", fmt.Sprintf("Field '%v' is not valid", value.Type().Field(i).Name), User{}
-		}
 		if !first {
-			queryStr.WriteString(", ")
+			fieldsStr.WriteString(fmt.Sprintf(", %s", fieldName))
+			valuesStr.WriteString(fmt.Sprintf(", $%d", parameterIndex))
 		} else {
+			fieldsStr.WriteString(fieldName)
+			valuesStr.WriteString(fmt.Sprintf("$%d", parameterIndex))
 			first = false
 		}
-		queryStr.WriteString(fmt.Sprintf("%v", value.Type().Field(i).Name))
-		if name == "Password" {
-			hash, err := bcrypt.GenerateFromPassword(value.Field(i).Interface().([]byte), bcrypt.DefaultCost)
-			if err != nil {
-				return "error", "Failed to encrypt password", User{}
-			}
-			values = append(values, fmt.Sprintf("%v", hash))
-		} else {
-			values = append(values, fmt.Sprintf("%v", value.Field(i).Interface()))
-			reflections.SetField(&user, value.Type().Field(i).Name, value.Field(i).Interface())
-		}
+		parameterIndex += 1
+		values = append(values, fieldValue)
 	}
 
-	// Set present column values
-	queryStr.WriteString(") VALUES(")
-	first = true
-	for i := 0; i < len(values); i++ {
-		if !first {
-			queryStr.WriteString(", ")
-		} else {
-			first = false
-		}
-		queryStr.WriteString(fmt.Sprintf("'%v'", values[i]))
-	}
-
-	// Finish and execute query
-	queryStr.WriteString(") returning id;")
+	// Finish and prepare query
+	queryStr.WriteString(fmt.Sprintf("%s) VALUES(%s) RETURNING id;", fieldsStr.String(), valuesStr.String()))
 	utilities.Sugar.Infof("SQL Query: %s", queryStr.String())
-	err := db.DB.QueryRow(queryStr.String()).Scan(&user.Id)
+	utilities.Sugar.Infof("Values: %v", values)
+	stmt, err := db.DB.Prepare(queryStr.String())
 	if err != nil {
-		return "error", "Failed to create new user", User{}
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), User{}
 	}
 
-	return "success", "New user created", user
+	// Execute query
+	err = stmt.QueryRow(values...).Scan(&user.Id)
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to create new user: %s", err.Error()), User{}
+	}
+
+	// Get created user
+	status, _, createdUser = GetUser(fmt.Sprintf("%v", user.Id))
+	if status != "success" {
+		return "error", "Failed to retrieve created user", User{}
+	}
+
+	return "success", "New user created", createdUser
 }
 
 func LoginUser(user User) (status string, message string, createdToken string) {
