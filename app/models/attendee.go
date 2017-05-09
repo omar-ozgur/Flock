@@ -3,6 +3,7 @@ package models
 import (
 	"bytes"
 	"fmt"
+	"github.com/asaskevich/govalidator"
 	_ "github.com/lib/pq"
 	"github.com/omar-ozgur/flock-api/db"
 	"github.com/omar-ozgur/flock-api/utilities"
@@ -11,9 +12,9 @@ import (
 )
 
 type Attendee struct {
-	Id      int
-	Post_id int
-	User_id int
+	Id      int `valid:"-"`
+	Post_id int `valid:"-"`
+	User_id int `valid:"-"`
 }
 
 const attendeeTableName = "attendees"
@@ -28,6 +29,12 @@ func CreateAttendee(attendee Attendee) (status string, message string, createdAt
 	value := reflect.ValueOf(attendee)
 	if value.NumField() <= len(attendeeRequiredParams) {
 		return "error", "Invalid attendee parameters", Attendee{}
+	}
+
+	// Validate attendee
+	_, err := govalidator.ValidateStruct(attendee)
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to validate attendee: %s", err.Error()), Attendee{}
 	}
 
 	// Check attendee uniqueness
@@ -85,7 +92,7 @@ func CreateAttendee(attendee Attendee) (status string, message string, createdAt
 	// Finish and execute query
 	queryStr.WriteString(") returning id;")
 	utilities.Sugar.Infof("SQL Query: %s", queryStr.String())
-	err := db.DB.QueryRow(queryStr.String()).Scan(&attendee.Id)
+	err = db.DB.QueryRow(queryStr.String()).Scan(&attendee.Id)
 	if err != nil {
 		return "error", "Failed to create new attendee", Attendee{}
 	}
