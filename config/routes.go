@@ -24,6 +24,7 @@ func InitRouter() (n *negroni.Negroni) {
 
 	r.Handle("/posts", controllers.PostsIndex).Methods("GET")
 	r.Handle("/posts", authorizationHandler(controllers.PostsCreate)).Methods("POST")
+	r.Handle("/posts/search", controllers.PostsSearch).Methods("POST")
 	r.Handle("/posts/{id}", controllers.PostsShow).Methods("GET")
 	r.Handle("/posts/{id}", authorizationHandler(controllers.PostsUpdate)).Methods("PUT")
 	r.Handle("/posts/{id}", authorizationHandler(controllers.PostsDelete)).Methods("DELETE")

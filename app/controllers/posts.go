@@ -44,6 +44,23 @@ var PostsCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	w.Write(JSON)
 })
 
+var PostsSearch = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var post models.Post
+	b, _ := ioutil.ReadAll(r.Body)
+	json.Unmarshal(b, &post)
+
+	status, message, retrievedPosts := models.SearchPosts(post)
+
+	JSON, _ := json.Marshal(map[string]interface{}{
+		"status":  status,
+		"message": message,
+		"posts":   retrievedPosts,
+	})
+	w.Write(JSON)
+})
+
 var PostsShow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 

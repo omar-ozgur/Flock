@@ -16,6 +16,7 @@ Join events on-the-fly
 - **[Delete user]** DELETE /users/{id} (Takes: token; Returns: status, message)
 - **[Get all posts]** GET /posts (Returns: status, message, posts)
 - **[Create post]** POST /posts (Takes: token, post; Returns: status, message, post)
+- **[Search posts]** POST /posts/search (Takes: post; Returns: status, message, posts)
 - **[Get post]** GET /posts/{id} (Returns: status, message, post)
 - **[Update post]** PUT /posts/{id} (Takes: token, post; Returns: status, message, post}
 - **[Delete post]** DELETE /posts/{id} (Takes: token; Returns: status, message)

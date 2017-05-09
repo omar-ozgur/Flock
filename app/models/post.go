@@ -120,6 +120,56 @@ func CreatePost(userId string, post Post) (status string, message string, create
 	}
 }
 
+func SearchPosts(post Post) (status string, message string, retrievedPosts []Post) {
+
+	// Create query string
+	var queryStr bytes.Buffer
+
+	// Create and execute query
+	queryStr.WriteString(fmt.Sprintf("SELECT * FROM %s WHERE", postTableName))
+
+	// Get post fields
+	value := reflect.ValueOf(post)
+	if value.NumField() <= 0 {
+		return "error", "Invalid number of fields", nil
+	}
+
+	// Set present column names and values
+	var first = true
+	for i := 0; i < value.NumField(); i++ {
+		if reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
+			continue
+		}
+		if !first {
+			queryStr.WriteString(" AND ")
+		} else {
+			queryStr.WriteString(" ")
+			first = false
+		}
+		queryStr.WriteString(fmt.Sprintf("%v='%v'", value.Type().Field(i).Name, value.Field(i).Interface()))
+	}
+
+	queryStr.WriteString(";")
+	utilities.Sugar.Infof("SQL Query: %s", queryStr.String())
+	rows, err := db.DB.Query(queryStr.String())
+	if err != nil {
+		return "error", "Failed to query posts", nil
+	}
+
+	// Print table
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		err = rows.Scan(&post.Id, &post.Title, &post.Location, &post.User_id, &post.Latitude, &post.Longitude, &post.Zip, &post.Time_created, &post.Time_expires)
+		if err != nil {
+			return "error", "Failed to retrieve post information", nil
+		}
+		posts = append(posts, post)
+	}
+
+	return "success", "Retrieved posts", posts
+}
+
 func GetPost(id string) (status string, message string, retrievedPost Post) {
 
 	// Create and execute query
