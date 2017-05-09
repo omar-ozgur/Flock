@@ -153,7 +153,7 @@ func LoginUser(user User) (status string, message string, createdToken string) {
 func GetUser(id string) (status string, message string, retrievedUser User) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=%s;", userTableName, id)
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id='%s';", userTableName, id)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
 	row := db.DB.QueryRow(queryStr)
 
@@ -197,6 +197,24 @@ func UpdateUser(id string, user User) (status string, message string, updatedUse
 	value := reflect.ValueOf(user)
 	if value.NumField() <= 0 {
 		return "error", "Invalid number of fields", user
+	}
+
+	// Check user uniqueness
+	uniqueMap := make(map[string]interface{})
+	for key, _ := range UserUniqueParams {
+		fieldValue, err := reflections.GetField(&user, key)
+		if err != nil || reflect.DeepEqual(fieldValue, reflect.Zero(reflect.TypeOf(fieldValue)).Interface()) {
+			continue
+		}
+		uniqueMap[key] = fieldValue
+	}
+	if len(uniqueMap) > 0 {
+		status, _, retrievedUsers := SearchUsers(uniqueMap, "OR")
+		if status != "success" {
+			return "error", "Failed to check user uniqueness", User{}
+		} else if retrievedUsers != nil {
+			return "error", "User is not unique", User{}
+		}
 	}
 
 	// Create query string
