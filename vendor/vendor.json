@@ -3,6 +3,18 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "n2KWrxS+GQrPiFI/RQfKSj1nZTs=",
+			"path": "github.com/auth0/go-jwt-middleware",
+			"revision": "5493cabe49f7bfa6e2ec444a09d334d90cd4e2bd",
+			"revisionTime": "2017-04-25T17:11:59Z"
+		},
+		{
+			"checksumSHA1": "2Fy1Y6Z3lRRX1891WF/+HT4XS2I=",
+			"path": "github.com/dgrijalva/jwt-go",
+			"revision": "2268707a8f0843315e2004ee4f1d021dc08baedf",
+			"revisionTime": "2017-02-01T22:58:49Z"
+		},
+		{
 			"checksumSHA1": "zmCk+lgIeiOf0Ng9aFP9aFy8ksE=",
 			"path": "github.com/gorilla/mux",
 			"revision": "599cba5e7b6137d46ddf58fb1765f5d928e69604",
@@ -85,6 +97,12 @@
 			"path": "golang.org/x/crypto/blowfish",
 			"revision": "8e03fc1ab6a36bdb9e7dee75a213c30f0249d0c1",
 			"revisionTime": "2017-04-25T09:58:20Z"
+		},
+		{
+			"checksumSHA1": "6Rfu8Y/96ALpk4VIC1dK3uo+WYc=",
+			"path": "gopkg.in/oleiade/reflections.v1",
+			"revision": "2b6ec3da648e3e834dc41bad8d9ed7f2dc6a9496",
+			"revisionTime": "2016-08-17T06:38:38Z"
 		}
 	],
 	"rootPath": "github.com/omar-ozgur/flock-api"
