@@ -84,13 +84,13 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 			continue
 		}
 		if !first {
-			fieldsStr.WriteString(fmt.Sprintf(", %s", fieldName))
-			valuesStr.WriteString(fmt.Sprintf(", $%d", parameterIndex))
+			fieldsStr.WriteString(", ")
+			valuesStr.WriteString(", ")
 		} else {
-			fieldsStr.WriteString(fieldName)
-			valuesStr.WriteString(fmt.Sprintf("$%d", parameterIndex))
 			first = false
 		}
+		fieldsStr.WriteString(fieldName)
+		valuesStr.WriteString(fmt.Sprintf("$%d", parameterIndex))
 		parameterIndex += 1
 		values = append(values, fieldValue)
 	}
@@ -120,17 +120,30 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 }
 
 func LoginUser(user User) (status string, message string, createdToken string) {
-	if user.Email == "" || len(user.Password) == 0 {
-		return "error", "Invalid login parameters", ""
+
+	// Check login parameter presence
+	if user.Email == "" {
+		return "error", "Email cannot be blank", ""
+	} else if len(user.Password) == 0 {
+		return "error", "Password cannot be blank", ""
 	}
+
+	// Find user by email
 	var foundUser User
-	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE email='%s';", userTableName, user.Email)
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE email=$1;", userTableName)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
-	row := db.DB.QueryRow(queryStr)
-	err := row.Scan(&foundUser.Id, &foundUser.First_name, &foundUser.Last_name, &foundUser.Email, &foundUser.Fb_id, &foundUser.Password, &foundUser.Time_created)
+	utilities.Sugar.Infof("Values: %v", user.Email)
+	stmt, err := db.DB.Prepare(queryStr)
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), ""
+	}
+	row := stmt.QueryRow(user.Email)
+	err = row.Scan(&foundUser.Id, &foundUser.First_name, &foundUser.Last_name, &foundUser.Email, &foundUser.Fb_id, &foundUser.Password, &foundUser.Time_created)
 	if err != nil {
 		return "error", "Error while retrieving user", ""
 	}
+
+	// Check password
 	var hash []byte
 	hash, err = bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -141,12 +154,14 @@ func LoginUser(user User) (status string, message string, createdToken string) {
 		return "error", "Error while checking password", ""
 	}
 
+	// Create jwt token
 	var secretKey = []byte(os.Getenv("FLOCK_TOKEN_SECRET"))
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 	claims["user_id"] = foundUser.Id
 	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
 	tokenString, _ := token.SignedString(secretKey)
+
 	return "success", "Login token generated", tokenString
 }
 

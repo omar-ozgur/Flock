@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "iZVqf+ohBpXSydBqok/xQCu8vMs=",
+			"path": "github.com/asaskevich/govalidator",
+			"revision": "38ddb4612a5dfc2878731749ee825853d9f0aaa1",
+			"revisionTime": "2017-05-07T18:36:29Z"
+		},
+		{
 			"checksumSHA1": "n2KWrxS+GQrPiFI/RQfKSj1nZTs=",
 			"path": "github.com/auth0/go-jwt-middleware",
 			"revision": "5493cabe49f7bfa6e2ec444a09d334d90cd4e2bd",
