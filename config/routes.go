@@ -29,6 +29,9 @@ func InitRouter() (n *negroni.Negroni) {
 	r.HandleFunc("/attendees/{id}", controllers.AttendeesUpdate).Methods("PUT")
 	r.HandleFunc("/attendees/{id}", controllers.AttendeesDelete).Methods("DELETE")
 
+	//login handling
+	r.HandleFunc("/login", controllers.LoginIndex).Methods("GET")
+
 	n = negroni.New(negroni.HandlerFunc(middleware.CustomMiddleware), negroni.NewLogger())
 	n.UseHandler(r)
 
