@@ -58,43 +58,44 @@ func CreateAttendee(attendee Attendee) (status string, message string, createdAt
 	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (", attendeeTableName))
 
 	// Set present column names
+	var fieldsStr, valuesStr bytes.Buffer
+	var values []interface{}
+	parameterIndex := 1
 	var first = true
-	var values []string
 	for i := 0; i < value.NumField(); i++ {
-		name := value.Type().Field(i).Name
-		if attendeeAutoParams[name] {
+		fieldName := value.Type().Field(i).Name
+		fieldValue := fmt.Sprintf("%v", value.Field(i).Interface())
+		if attendeeAutoParams[fieldName] {
 			continue
 		}
-		if attendeeRequiredParams[name] && reflect.DeepEqual(value.Field(i).Interface(), reflect.Zero(reflect.TypeOf(value.Field(i).Interface())).Interface()) {
-			return "error", fmt.Sprintf("Field '%v' is not valid", value.Type().Field(i).Name), Attendee{}
+		if attendeeRequiredParams[fieldName] && reflect.DeepEqual(fieldValue, reflect.Zero(reflect.TypeOf(fieldValue)).Interface()) {
+			return "error", fmt.Sprintf("Field '%v' is not valid", fieldName), Attendee{}
 		}
 		if !first {
-			queryStr.WriteString(", ")
+			fieldsStr.WriteString(", ")
+			valuesStr.WriteString(", ")
 		} else {
 			first = false
 		}
-		queryStr.WriteString(fmt.Sprintf("%v", value.Type().Field(i).Name))
-		values = append(values, fmt.Sprintf("%v", value.Field(i).Interface()))
+		fieldsStr.WriteString(fieldName)
+		valuesStr.WriteString(fmt.Sprintf("$%d", parameterIndex))
+		parameterIndex += 1
+		values = append(values, fieldValue)
 	}
 
-	// Set present column values
-	queryStr.WriteString(") VALUES(")
-	first = true
-	for i := 0; i < len(values); i++ {
-		if !first {
-			queryStr.WriteString(", ")
-		} else {
-			first = false
-		}
-		queryStr.WriteString(fmt.Sprintf("'%v'", values[i]))
-	}
-
-	// Finish and execute query
-	queryStr.WriteString(") returning id;")
+	// Finish and prepare query
+	queryStr.WriteString(fmt.Sprintf("%s) VALUES(%s) RETURNING id;", fieldsStr.String(), valuesStr.String()))
 	utilities.Sugar.Infof("SQL Query: %s", queryStr.String())
-	err = db.DB.QueryRow(queryStr.String()).Scan(&attendee.Id)
+	utilities.Sugar.Infof("Values: %v", values)
+	stmt, err := db.DB.Prepare(queryStr.String())
 	if err != nil {
-		return "error", "Failed to create new attendee", Attendee{}
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), Attendee{}
+	}
+
+	// Execute query
+	err = stmt.QueryRow(values...).Scan(&attendee.Id)
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to create new attendee: %s", err.Error()), Attendee{}
 	}
 
 	return "success", "New attendee created", attendee
@@ -103,9 +104,14 @@ func CreateAttendee(attendee Attendee) (status string, message string, createdAt
 func GetPostAttendees(postId string) (status string, message string, retrievedUsers []User) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE post_id='%s';", attendeeTableName, postId)
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE post_id=$1;", attendeeTableName)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
-	rows, err := db.DB.Query(queryStr)
+	utilities.Sugar.Infof("Values: %v", postId)
+	stmt, err := db.DB.Prepare(queryStr)
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), nil
+	}
+	rows, err := stmt.Query(postId)
 	if err != nil {
 		return "error", "Failed to query attendees", nil
 	}
@@ -131,9 +137,14 @@ func GetPostAttendees(postId string) (status string, message string, retrievedUs
 func DeleteAttendee(attendee Attendee) (status string, message string) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("DELETE FROM %s WHERE post_id='%d' AND user_id='%d';", attendeeTableName, attendee.Post_id, attendee.User_id)
+	queryStr := fmt.Sprintf("DELETE FROM %s WHERE post_id=$1 AND user_id=$2;", attendeeTableName)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
-	_, err := db.DB.Exec(queryStr)
+	utilities.Sugar.Infof("Values: [%d, %d]", attendee.Post_id, attendee.User_id)
+	stmt, err := db.DB.Prepare(queryStr)
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error())
+	}
+	_, err = stmt.Exec(attendee.Post_id, attendee.User_id)
 	if err != nil {
 		return "error", "Failed to delete attendee"
 	}
