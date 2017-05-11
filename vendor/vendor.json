@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "MEFFVwn/dsroeQEc6zJ53LwUU5I=",
+			"path": "github.com/antonholmquist/jason",
+			"revision": "962e09b85496e2e158eec1567fb4c826ce3d55d1",
+			"revisionTime": "2016-08-29T10:40:12Z"
+		},
+		{
 			"checksumSHA1": "iZVqf+ohBpXSydBqok/xQCu8vMs=",
 			"path": "github.com/asaskevich/govalidator",
 			"revision": "38ddb4612a5dfc2878731749ee825853d9f0aaa1",
@@ -103,6 +109,24 @@
 			"path": "golang.org/x/crypto/blowfish",
 			"revision": "8e03fc1ab6a36bdb9e7dee75a213c30f0249d0c1",
 			"revisionTime": "2017-04-25T09:58:20Z"
+		},
+		{
+			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
+			"path": "golang.org/x/net/context",
+			"revision": "c9b681d35165f1995d6f3034e61f8761d4b90c99",
+			"revisionTime": "2017-05-10T00:04:54Z"
+		},
+		{
+			"checksumSHA1": "SjCoL7KD7qBmgSuqGTCAuUhigDk=",
+			"path": "golang.org/x/oauth2",
+			"revision": "ad516a297a9f2a74ecc244861b298c94bdd28b9d",
+			"revisionTime": "2017-05-10T21:51:24Z"
+		},
+		{
+			"checksumSHA1": "Umx4Fmn5FyXJyUVzKWhnQdvFNkc=",
+			"path": "golang.org/x/oauth2/internal",
+			"revision": "ad516a297a9f2a74ecc244861b298c94bdd28b9d",
+			"revisionTime": "2017-05-10T21:51:24Z"
 		},
 		{
 			"checksumSHA1": "6Rfu8Y/96ALpk4VIC1dK3uo+WYc=",
