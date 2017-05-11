@@ -161,6 +161,8 @@ func SearchAttendees(parameters map[string]interface{}, operator string) (status
 	queryStr.WriteString(fmt.Sprintf("SELECT * FROM %s WHERE", attendeeTableName))
 
 	// Set present column names and values
+	var values []interface{}
+	parameterIndex := 1
 	var first = true
 	for key, value := range parameters {
 		if !first {
@@ -169,12 +171,19 @@ func SearchAttendees(parameters map[string]interface{}, operator string) (status
 			queryStr.WriteString(" ")
 			first = false
 		}
-		queryStr.WriteString(fmt.Sprintf("%v='%v'", key, value))
+		queryStr.WriteString(fmt.Sprintf("%v=$%d", key, parameterIndex))
+		values = append(values, value)
+		parameterIndex += 1
 	}
 
 	queryStr.WriteString(";")
 	utilities.Sugar.Infof("SQL Query: %s", queryStr.String())
-	rows, err := db.DB.Query(queryStr.String())
+	utilities.Sugar.Infof("Values: %v", values)
+	stmt, err := db.DB.Prepare(queryStr.String())
+	if err != nil {
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), nil
+	}
+	rows, err := stmt.Query(values...)
 	if err != nil {
 		return "error", "Failed to query attendees", nil
 	}
