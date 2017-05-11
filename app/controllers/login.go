@@ -7,9 +7,14 @@ import (
 	"github.com/antonholmquist/jason"
 	"io/ioutil"
 	"github.com/omar-ozgur/flock-api/utilities"
+	//"strconv"
 )
 
-func LoginIndex(w http.ResponseWriter, r *http.Request) {
+func userExists(first_name string, last_name string, email string){
+	//user_map = 
+}
+
+func LoginWithFacebook(w http.ResponseWriter, r *http.Request) {
 	page := new(LoggedInPageAttr)
 	code := r.FormValue("code")
 	tok, err := utilities.FbConfig.Exchange(oauth2.NoContext, code)
@@ -32,6 +37,9 @@ func LoginIndex(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(user)
 	first_name, _ := user.GetString("first_name")
 	last_name, _ := user.GetString("last_name")
+	//email, _:= user.GetString("email")
+	//fb_id_string, _:= user.GetString("id")
+	//fb_id, err := strconv.Atoi(fb_id_string)
 
 	page.Name = first_name + " " + last_name
 	page.URL = tok.AccessToken

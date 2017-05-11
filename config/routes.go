@@ -33,8 +33,8 @@ func InitRouter() (n *negroni.Negroni) {
 	r.Handle("/posts/{id}/attend", authorizationHandler(controllers.PostsAttend)).Methods("POST")
 	r.Handle("/posts/{id}/attendance", authorizationHandler(controllers.PostsDeleteAttendance)).Methods("DELETE")
 
-	//login handling
-	r.HandleFunc("/login", controllers.LoginIndex).Methods("GET")
+	//login handling for Facebook
+	r.HandleFunc("/loginWithFB", controllers.LoginWithFacebook).Methods("GET")
 
 	n = negroni.New(negroni.HandlerFunc(middleware.CustomMiddleware), negroni.NewLogger())
 	n.UseHandler(r)
