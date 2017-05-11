@@ -23,3 +23,38 @@ Join events on-the-fly
 - **[Get post attendees]** GET /posts/{id}/attendees (Returns: status, message, attendees)
 - **[Attend post]** POST /posts/{id}/attend (Takes: token; Returns: status, message, attendee)
 - **[Remove post attendance]** DELETE /posts/{id}/attendance (Takes: token; Returns: status, message)
+
+# Models
+```
+type User struct {
+  Id           int       `valid:"-"`
+  First_name   string    `valid:"alphanum,required"`
+  Last_name    string    `valid:"alphanum,required"`
+  Email        string    `valid:"email,required"`
+  Fb_id        int       `valid:"-"`
+  Password     []byte    `valid:"required"`
+  Time_created time.Time `valid:"-"`
+}
+```
+
+```
+type Post struct {
+  Id           int       `valid:"-"`
+  Title        string    `valid:"alphanum,required"`
+  Location     string    `valid:"alphanum,required"`
+  User_id      int       `valid:"required"`
+  Latitude     string    `valid:"latitude,required"`
+  Longitude    string    `valid:"longitude,required"`
+  Zip          int       `valid:"required"`
+  Time_created time.Time `valid:"-"`
+  Time_expires time.Time `valid:"-"`
+}
+```
+
+```
+type Attendee struct {
+  Id      int `valid:"-"`
+  Post_id int `valid:"-"`
+  User_id int `valid:"-"`
+}
+```
