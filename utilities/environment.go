@@ -10,7 +10,7 @@ var FbConfig = &oauth2.Config{
 	// Example - ClientId: "1234567890", ClientSecret: "red2drdff6e2321e51aedcc94e19c76ee"
 
 	ClientID:     os.Getenv("FLOCK_FB_CLIENT_ID"), // change this to yours
-	ClientSecret: os.Getenv("FLOCK_FB_CLIENT_ID"),
+	ClientSecret: os.Getenv("FLOCK_FB_CLIENT_SECRET"),
 	RedirectURL:  os.Getenv("FLOCK_FB_REDIRECT_URL"), // change this to your webserver adddress
 	Scopes:       []string{"email", "user_friends", "public_profile"},
 	Endpoint: oauth2.Endpoint{
