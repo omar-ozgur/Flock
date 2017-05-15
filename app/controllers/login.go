@@ -8,10 +8,11 @@ import (
 	"golang.org/x/oauth2"
 	"io/ioutil"
 	"net/http"
+	"encoding/json"
+
 )
 
 func LoginWithFacebook(w http.ResponseWriter, r *http.Request) {
-	page := new(LoggedInPageAttr)
 	code := r.FormValue("code")
 	tok, err := utilities.FbConfig.Exchange(oauth2.NoContext, code)
 	fmt.Println(tok)
@@ -25,29 +26,28 @@ func LoginWithFacebook(w http.ResponseWriter, r *http.Request) {
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
 
-	if err == nil {
-		//fmt.Println(body)
-	}
 
 	user, _ := jason.NewObjectFromBytes([]byte(body))
-	fmt.Println(user)
 
 	first_name, _ := user.GetString("first_name")
 	last_name, _ := user.GetString("last_name")
 	email, _ := user.GetString("email")
 	fb_id_string, _ := user.GetString("id")
 
-	page.Name = first_name + " " + last_name
-
 	status, message, app_token := models.ProcessFBLogin(first_name, last_name, email, fb_id_string)
 
 	if status != "success" {
 		fmt.Println(message)
 	}
+		
+	JSON, _ := json.Marshal(map[string]interface{}{
+		"status":  status,
+		"message": message,
+		"fb_token": tok.AccessToken,
+		"app_token": app_token,
+	})
 
-	page.URL = tok.AccessToken + " YOYOY " + app_token
-
-	templates.ExecuteTemplate(w, "test_login.html", page)
+	w.Write(JSON)
 
 }
 
