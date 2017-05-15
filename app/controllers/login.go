@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"github.com/omar-ozgur/flock-api/utilities"
 	"github.com/omar-ozgur/flock-api/app/models"
-	"strconv"
 )
 
 
@@ -38,15 +37,16 @@ func LoginWithFacebook(w http.ResponseWriter, r *http.Request) {
 	last_name, _ := user.GetString("last_name")
 	email, _:= user.GetString("email")
 	fb_id_string, _:= user.GetString("id")
-	fb_id, err := strconv.Atoi(fb_id_string)
 
 	page.Name = first_name + " " + last_name
 
-	app_token = models.ProcessFBLogin(first_name, last_name, email, fb_id)
+	status, message, app_token := models.ProcessFBLogin(first_name, last_name, email, fb_id_string)
 
+	if (status != "success"){
+		fmt.Println(message)
+	}
 
-
-	page.URL = tok.AccessToken
+	page.URL = tok.AccessToken + " YOYOY " + app_token
 	
 
 

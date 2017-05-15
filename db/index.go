@@ -35,7 +35,7 @@ func InitDB() {
            first_name text,
            last_name text,
            email text,
-           fb_id int,
+           fb_id text,
            password bytea,
            time_created timestamp DEFAULT now()
            );`)
