@@ -144,3 +144,18 @@ var UsersDelete = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	})
 	w.Write(JSON)
 })
+
+var UsersAttendance = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+
+	status, message, retrievedPosts := models.GetUserAttendance(vars["id"])
+
+	JSON, _ := json.Marshal(map[string]interface{}{
+		"status":  status,
+		"message": message,
+		"posts":   retrievedPosts,
+	})
+	w.Write(JSON)
+})
