@@ -28,7 +28,7 @@ type User struct {
 const userTableName = "users"
 
 var UserAutoParams = map[string]bool{"Id": true, "Time_created": true}
-var UserUniqueParams = map[string]bool{"Email": true}
+var UserUniqueParams = map[string]bool{"Email": true, "Fb_id"}
 var UserRequiredParams = map[string]bool{"First_name": true, "Last_name": true, "Email": true, "Fb_id": true, "Password": true}
 
 func CreateUser(user User) (status string, message string, createdUser User) {
@@ -61,7 +61,7 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 		}
 		uniqueMap[key] = fieldValue
 	}
-	status, message, retrievedUsers := SearchUsers(uniqueMap, "OR")
+	status, message, retrievedUsers := SearchUsers(uniqueMap, "AND")
 	if status != "success" {
 		return "error", "Failed to check user uniqueness", User{}
 	} else if retrievedUsers != nil {
