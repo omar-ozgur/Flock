@@ -383,3 +383,27 @@ func SearchUsers(parameters map[string]interface{}, operator string) (status str
 
 	return "success", "Retrieved users", users
 }
+
+func GetUserAttendance(id string) (status string, message string, retrievedPosts []Post) {
+
+	// Find attendee objects
+	attendeeParams := make(map[string]interface{})
+	attendeeParams["User_id"] = id
+	status, message, retrievedAttendees := SearchAttendees(attendeeParams, "AND")
+	if status != "success" {
+		return "error", "Failed to check search attendees", nil
+	}
+
+	// Find posts associated with attendee objects
+	var posts []Post
+	for i := range retrievedAttendees {
+		post := Post{Id: retrievedAttendees[i].Post_id}
+		status, _, retrievedPosts := SearchPosts(post)
+		if status != "success" {
+			return "error", "Failed to retrieve posts based on attendee information", nil
+		}
+		posts = append(posts, retrievedPosts...)
+	}
+
+	return "success", "Retrieved posts", posts
+}
