@@ -20,7 +20,7 @@ type User struct {
 	First_name   string    `valid:"alphanum,required"`
 	Last_name    string    `valid:"alphanum,required"`
 	Email        string    `valid:"email,required"`
-	Fb_id        string       `valid:"-"`
+	Fb_id        string    `valid:"-"`
 	Password     []byte    `valid:"required"`
 	Time_created time.Time `valid:"-"`
 }
@@ -33,18 +33,18 @@ var UserRequiredParams = map[string]bool{"First_name": true, "Last_name": true, 
 
 func CreateUser(user User) (status string, message string, createdUser User) {
 
-	// Get user fields
-	value := reflect.ValueOf(user)
-	if value.NumField() <= len(UserRequiredParams) {
-		return "error", "Invalid number of user parameters", User{}
-	}
-
 	// Encrypt password
 	hash, err := bcrypt.GenerateFromPassword(user.Password, bcrypt.DefaultCost)
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to encrypt password: %s", err.Error()), User{}
 	}
 	reflections.SetField(&user, "Password", hash)
+
+	// Get user fields
+	value := reflect.ValueOf(user)
+	if value.NumField() <= len(UserRequiredParams) {
+		return "error", "Invalid number of user parameters", User{}
+	}
 
 	// Validate user
 	_, err = govalidator.ValidateStruct(user)
@@ -120,20 +120,20 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 }
 
 func ProcessFBLogin(first_name string, last_name string, email string, fb_id string) (status string, message string, accessToken string) {
-	
+
 	search_query := make(map[string]interface{})
 
 	search_query["first_name"] = first_name
-	search_query["last_name"]	= last_name
+	search_query["last_name"] = last_name
 	search_query["email"] = email
 	search_query["fb_id"] = fb_id
 
 	status, message, retrievedUsers := SearchUsers(search_query, "AND")
-	if (status != "success"){
+	if status != "success" {
 		return "error", message, ""
 	}
 
-	if (len(retrievedUsers) == 0){
+	if len(retrievedUsers) == 0 {
 		var user User
 		user.First_name = search_query["first_name"].(string)
 		user.Last_name = search_query["last_name"].(string)
@@ -143,7 +143,7 @@ func ProcessFBLogin(first_name string, last_name string, email string, fb_id str
 
 		status, message, createdUser := CreateUser(user)
 
-		if (status != "success"){
+		if status != "success" {
 			return "error", message, ""
 		}
 
@@ -153,7 +153,6 @@ func ProcessFBLogin(first_name string, last_name string, email string, fb_id str
 	return LoginUser(retrievedUsers[0])
 
 }
-
 
 func LoginUser(user User) (status string, message string, createdToken string) {
 
