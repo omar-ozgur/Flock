@@ -119,6 +119,22 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 	return "success", "New user created", createdUser
 }
 
+// func userExists(first_name string, last_name string, email string){
+// 	//user_map = 
+// }
+
+func ProcessFBLogin(first_name string, last_name string, email string, fb_id int) (status string, message string, accessToken string) {
+	search_query = make(map[string]interface{})
+	search_query["First_name"] = first_name
+	search_query["Last_name"]	= last_name
+	search_query["Email"] = email
+	search_query["Fb_id"] = fb_id
+
+	status, message, retrievedUsers := SearchUsers(search_query, "AND")
+
+}
+
+
 func LoginUser(user User) (status string, message string, createdToken string) {
 
 	// Check login parameter presence
