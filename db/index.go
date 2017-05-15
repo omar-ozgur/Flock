@@ -47,6 +47,7 @@ func InitDB() {
 		_, err = DB.Exec(`CREATE TABLE posts (
            id SERIAL,
            title text,
+           description text,
            location text,
            user_id int,
            latitude text,

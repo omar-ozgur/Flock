@@ -17,8 +17,8 @@ import (
 
 type User struct {
 	Id           int       `valid:"-"`
-	First_name   string    `valid:"alphanum,required"`
-	Last_name    string    `valid:"alphanum,required"`
+	First_name   string    `valid:"required"`
+	Last_name    string    `valid:"required"`
 	Email        string    `valid:"email,required"`
 	Fb_id        string    `valid:"-"`
 	Password     []byte    `valid:"required"`

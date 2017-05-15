@@ -15,8 +15,9 @@ import (
 
 type Post struct {
 	Id           int       `valid:"-"`
-	Title        string    `valid:"alphanum,required"`
-	Location     string    `valid:"alphanum,required"`
+	Title        string    `valid:"required"`
+	Description  string    `valid:"required"`
+	Location     string    `valid:"required"`
 	User_id      int       `valid:"required"`
 	Latitude     string    `valid:"latitude,required"`
 	Longitude    string    `valid:"longitude,required"`
@@ -28,7 +29,7 @@ type Post struct {
 const postTableName = "posts"
 
 var postAutoParams = map[string]bool{"Id": true, "User_id": true, "Time_created": true, "Time_expires": true}
-var postRequiredParams = map[string]bool{"Title": true, "Location": true, "Latitude": true, "Longitude": true, "Zip": true}
+var postRequiredParams = map[string]bool{"Title": true, "Description": true, "Location": true, "Latitude": true, "Longitude": true, "Zip": true}
 
 func GetPosts() (status string, message string, retrievedPosts []Post) {
 
