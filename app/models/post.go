@@ -49,7 +49,7 @@ func GetPosts() (status string, message string, retrievedPosts []Post) {
 	var posts []Post
 	for rows.Next() {
 		var post Post
-		err = rows.Scan(&post.Id, &post.Title, &post.Location, &post.User_id, &post.Latitude, &post.Longitude, &post.Zip, &post.Time_created, &post.Time_expires)
+		err = rows.Scan(&post.Id, &post.Title, &post.Description, &post.Location, &post.User_id, &post.Latitude, &post.Longitude, &post.Zip, &post.Time_created, &post.Time_expires)
 		if err != nil {
 			return "error", "Failed to retrieve post information", nil
 		}
@@ -188,7 +188,7 @@ func SearchPosts(post Post) (status string, message string, retrievedPosts []Pos
 	var posts []Post
 	for rows.Next() {
 		var post Post
-		err = rows.Scan(&post.Id, &post.Title, &post.Location, &post.User_id, &post.Latitude, &post.Longitude, &post.Zip, &post.Time_created, &post.Time_expires)
+		err = rows.Scan(&post.Id, &post.Title, &post.Description, &post.Location, &post.User_id, &post.Latitude, &post.Longitude, &post.Zip, &post.Time_created, &post.Time_expires)
 		if err != nil {
 			return "error", "Failed to retrieve post information", nil
 		}
@@ -212,7 +212,7 @@ func GetPost(id string) (status string, message string, retrievedPost Post) {
 
 	// Get post info
 	var post Post
-	err = row.Scan(&post.Id, &post.Title, &post.Location, &post.User_id, &post.Latitude, &post.Longitude, &post.Zip, &post.Time_created, &post.Time_expires)
+	err = row.Scan(&post.Id, &post.Title, &post.Description, &post.Location, &post.User_id, &post.Latitude, &post.Longitude, &post.Zip, &post.Time_created, &post.Time_expires)
 	if err != nil {
 		return "error", "Failed to retrieve post information", Post{}
 	}
