@@ -1,17 +1,17 @@
 package controllers
 
 import (
-	"net/http"
 	"github.com/omar-ozgur/flock-api/utilities"
+	"net/http"
 	//"fmt"
 )
 
 func PagesIndex(w http.ResponseWriter, r *http.Request) {
 	page := new(PagesAttributes)
 	page.Name = "home"
-	
- 	url := utilities.FbConfig.AuthCodeURL("")
-	
+
+	url := utilities.FbConfig.AuthCodeURL("")
+
 	//fmt.Println(url);
 
 	page.URL = url
@@ -20,5 +20,5 @@ func PagesIndex(w http.ResponseWriter, r *http.Request) {
 
 type PagesAttributes struct {
 	Name string
-	URL string
+	URL  string
 }
