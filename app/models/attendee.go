@@ -125,10 +125,9 @@ func GetPostAttendees(postId string) (status string, message string, retrievedUs
 			return "error", "Failed to retrieve attendee information", nil
 		}
 		status, _, retrievedUser := GetUser(fmt.Sprintf("%v", attendee.User_id))
-		if status != "success" {
-			return "error", "Failed to retrieve attendee user information", nil
+		if status == "success" {
+			users = append(users, retrievedUser)
 		}
-		users = append(users, retrievedUser)
 	}
 
 	return "success", "Retrieved attendee user information", users
