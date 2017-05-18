@@ -12,6 +12,7 @@ import (
 	"gopkg.in/oleiade/reflections.v1"
 	"os"
 	"reflect"
+	"strconv"
 	"time"
 )
 
@@ -347,6 +348,14 @@ func DeleteUser(id string) (status string, message string) {
 	_, err = stmt.Exec(id)
 	if err != nil {
 		return "error", "Failed to delete user"
+	}
+
+	i, _ := strconv.Atoi(id)
+	status, _, retrievedPosts := SearchPosts(Post{User_id: i})
+	if status == "success" {
+		for _, post := range retrievedPosts {
+			DeletePost(fmt.Sprintf("%d", post.Id))
+		}
 	}
 
 	return "success", "Deleted user"
