@@ -73,6 +73,24 @@ var UsersIndex = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Write(JSON)
 })
 
+var UsersSearch = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	b, _ := ioutil.ReadAll(r.Body)
+	params := make(map[string]interface{})
+
+	json.Unmarshal(b, &params)
+
+	status, message, retrievedUsers := models.SearchUsers(params, "AND")
+
+	JSON, _ := json.Marshal(map[string]interface{}{
+		"status":  status,
+		"message": message,
+		"users":   retrievedUsers,
+	})
+	w.Write(JSON)
+})
+
 var UsersShow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 

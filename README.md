@@ -11,6 +11,7 @@ Join events on-the-fly
 - **[Log in]** POST /login (Takes: email, password; Returns: status, message, token)
 - **[Get current user]** GET /profile (Takes: token; Returns: status, message, user)
 - **[Get all users]** GET /users (Returns: status, message, users)
+- **[Search for user]** POST /users/search (Takes: user; Returns: status, message, users)
 - **[Get user]** GET /users/{id} (Returns: status, message, user)
 - **[Update user]** PUT /users/{id} (Takes: token, user; Returns: status, message, user)
 - **[Delete user]** DELETE /users/{id} (Takes: token; Returns: status, message)
