@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/antonholmquist/jason"
 	"github.com/omar-ozgur/flock-api/app/models"
 	"io/ioutil"
