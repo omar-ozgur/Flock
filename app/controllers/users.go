@@ -223,13 +223,13 @@ var UsersAttendance = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 	vars := mux.Vars(r)
 
 	// Get events the user is going to
-	status, message, retrievedPosts := models.GetUserAttendance(vars["id"])
+	status, message, retrievedEvents := models.GetUserAttendance(vars["id"])
 
 	// Return response
 	JSON, _ := json.Marshal(map[string]interface{}{
 		"status":  status,
 		"message": message,
-		"posts":   retrievedPosts,
+		"events":  retrievedEvents,
 	})
 	w.Write(JSON)
 })

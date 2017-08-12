@@ -351,10 +351,10 @@ func DeleteUser(id string) (status string, message string) {
 	}
 
 	i, _ := strconv.Atoi(id)
-	status, _, retrievedPosts := SearchPosts(Post{User_id: i})
+	status, _, retrievedEvents := SearchEvents(Event{User_id: i})
 	if status == "success" {
-		for _, post := range retrievedPosts {
-			DeletePost(fmt.Sprintf("%d", post.Id))
+		for _, event := range retrievedEvents {
+			DeleteEvent(fmt.Sprintf("%d", event.Id))
 		}
 	}
 
@@ -412,7 +412,7 @@ func SearchUsers(parameters map[string]interface{}, operator string) (status str
 	return "success", "Retrieved users", users
 }
 
-func GetUserAttendance(id string) (status string, message string, retrievedPosts []Post) {
+func GetUserAttendance(id string) (status string, message string, retrievedEvents []Event) {
 
 	// Find attendee objects
 	attendeeParams := make(map[string]interface{})
@@ -422,16 +422,16 @@ func GetUserAttendance(id string) (status string, message string, retrievedPosts
 		return "error", "Failed to check search attendees", nil
 	}
 
-	// Find posts associated with attendee objects
-	var posts []Post
+	// Find events associated with attendee objects
+	var events []Event
 	for i := range retrievedAttendees {
-		post := Post{Id: retrievedAttendees[i].Post_id}
-		status, _, retrievedPosts := SearchPosts(post)
+		event := Event{Id: retrievedAttendees[i].Event_id}
+		status, _, retrievedEvents := SearchEvents(event)
 		if status != "success" {
-			return "error", "Failed to retrieve posts based on attendee information", nil
+			return "error", "Failed to retrieve events based on attendee information", nil
 		}
-		posts = append(posts, retrievedPosts...)
+		events = append(events, retrievedEvents...)
 	}
 
-	return "success", "Retrieved posts", posts
+	return "success", "Retrieved events", events
 }

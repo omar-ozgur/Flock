@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-type Post struct {
+type Event struct {
 	Id           int       `valid:"-"`
 	Title        string    `valid:"required"`
 	Description  string    `valid:"required"`
@@ -26,15 +26,15 @@ type Post struct {
 	Time_expires time.Time `valid:"-"`
 }
 
-const postTableName = "posts"
+const eventTableName = "events"
 
-var postAutoParams = map[string]bool{"Id": true, "User_id": true, "Time_created": true, "Time_expires": true}
-var postRequiredParams = map[string]bool{"Title": true, "Description": true, "Location": true, "Latitude": true, "Longitude": true, "Zip": true}
+var eventAutoParams = map[string]bool{"Id": true, "User_id": true, "Time_created": true, "Time_expires": true}
+var eventRequiredParams = map[string]bool{"Title": true, "Description": true, "Location": true, "Latitude": true, "Longitude": true, "Zip": true}
 
-func GetPosts() (status string, message string, retrievedPosts []Post) {
+func GetEvents() (status string, message string, retrievedEvents []Event) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s;", postTableName)
+	queryStr := fmt.Sprintf("SELECT * FROM %s;", eventTableName)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
 	stmt, err := db.DB.Prepare(queryStr)
 	if err != nil {
@@ -42,47 +42,47 @@ func GetPosts() (status string, message string, retrievedPosts []Post) {
 	}
 	rows, err := stmt.Query()
 	if err != nil {
-		return "error", "Failed to query posts", nil
+		return "error", "Failed to query events", nil
 	}
 
-	// Get post info
-	var posts []Post
+	// Get event info
+	var events []Event
 	for rows.Next() {
-		var post Post
-		err = rows.Scan(&post.Id, &post.Title, &post.Description, &post.Location, &post.User_id, &post.Latitude, &post.Longitude, &post.Zip, &post.Time_created, &post.Time_expires)
+		var event Event
+		err = rows.Scan(&event.Id, &event.Title, &event.Description, &event.Location, &event.User_id, &event.Latitude, &event.Longitude, &event.Zip, &event.Time_created, &event.Time_expires)
 		if err != nil {
-			return "error", "Failed to retrieve post information", nil
+			return "error", "Failed to retrieve event information", nil
 		}
-		posts = append(posts, post)
+		events = append(events, event)
 	}
 
-	return "success", "Retrieved posts", posts
+	return "success", "Retrieved events", events
 }
 
-func CreatePost(userId string, post Post) (status string, message string, createdPost Post) {
+func CreateEvent(userId string, event Event) (status string, message string, createdEvent Event) {
 
-	// Get post fields
-	value := reflect.ValueOf(post)
-	if value.NumField() <= len(postRequiredParams) {
-		return "error", "Invalid post parameters", Post{}
+	// Get event fields
+	value := reflect.ValueOf(event)
+	if value.NumField() <= len(eventRequiredParams) {
+		return "error", "Invalid event parameters", Event{}
 	}
 
 	// Convert user ID to integer
 	var err error
-	post.User_id, err = strconv.Atoi(userId)
+	event.User_id, err = strconv.Atoi(userId)
 	if err != nil {
-		return "error", "Invalid user ID", Post{}
+		return "error", "Invalid user ID", Event{}
 	}
 
 	// Validate user
-	_, err = govalidator.ValidateStruct(post)
+	_, err = govalidator.ValidateStruct(event)
 	if err != nil {
-		return "error", fmt.Sprintf("Failed to validate post: %s", err.Error()), Post{}
+		return "error", fmt.Sprintf("Failed to validate event: %s", err.Error()), Event{}
 	}
 
 	// Create query string
 	var queryStr bytes.Buffer
-	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (", postTableName))
+	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (", eventTableName))
 
 	// Set present column names
 	var valuesStr bytes.Buffer
@@ -95,16 +95,16 @@ func CreatePost(userId string, post Post) (status string, message string, create
 	for i := 0; i < value.NumField(); i++ {
 		fieldName := value.Type().Field(i).Name
 		fieldValue := fmt.Sprintf("%v", value.Field(i).Interface())
-		if postAutoParams[fieldName] {
+		if eventAutoParams[fieldName] {
 			continue
 		}
-		if postRequiredParams[fieldName] && reflect.DeepEqual(fieldValue, reflect.Zero(reflect.TypeOf(fieldValue)).Interface()) {
-			return "error", fmt.Sprintf("Field '%v' is not valid", fieldName), Post{}
+		if eventRequiredParams[fieldName] && reflect.DeepEqual(fieldValue, reflect.Zero(reflect.TypeOf(fieldValue)).Interface()) {
+			return "error", fmt.Sprintf("Field '%v' is not valid", fieldName), Event{}
 		}
 		queryStr.WriteString(fmt.Sprintf(", %v", fieldName))
 		valuesStr.WriteString(fmt.Sprintf(", $%d", parameterIndex))
 		values = append(values, fmt.Sprintf("%v", fieldValue))
-		reflections.SetField(&post, value.Type().Field(i).Name, value.Field(i).Interface())
+		reflections.SetField(&event, value.Type().Field(i).Name, value.Field(i).Interface())
 		parameterIndex += 1
 	}
 
@@ -115,32 +115,32 @@ func CreatePost(userId string, post Post) (status string, message string, create
 	utilities.Sugar.Infof("Values: %v", values)
 	stmt, err := db.DB.Prepare(queryStr.String())
 	if err != nil {
-		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), Post{}
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), Event{}
 	}
-	err = stmt.QueryRow(values...).Scan(&post.Id)
+	err = stmt.QueryRow(values...).Scan(&event.Id)
 	if err != nil {
-		return "error", "Failed to create new post", Post{}
+		return "error", "Failed to create new event", Event{}
 	}
 
 	// Create attendee
-	attendee := Attendee{Post_id: post.Id, User_id: post.User_id}
+	attendee := Attendee{Event_id: event.Id, User_id: event.User_id}
 	fmt.Println(attendee)
 	status, _, _ = CreateAttendee(attendee)
 	if status == "success" {
-		return "success", "New post created", post
+		return "success", "New event created", event
 	} else {
-		return "error", "Failed to add attendee to new post", Post{}
+		return "error", "Failed to add attendee to new event", Event{}
 	}
 }
 
-func SearchPosts(post Post) (status string, message string, retrievedPosts []Post) {
+func SearchEvents(event Event) (status string, message string, retrievedEvents []Event) {
 
 	// Create query string
 	var queryStr bytes.Buffer
-	queryStr.WriteString(fmt.Sprintf("SELECT * FROM %s WHERE", postTableName))
+	queryStr.WriteString(fmt.Sprintf("SELECT * FROM %s WHERE", eventTableName))
 
-	// Get post fields
-	value := reflect.ValueOf(post)
+	// Get event fields
+	value := reflect.ValueOf(event)
 	if value.NumField() <= 0 {
 		return "error", "Invalid number of fields", nil
 	}
@@ -181,56 +181,56 @@ func SearchPosts(post Post) (status string, message string, retrievedPosts []Pos
 	}
 	rows, err := stmt.Query(values...)
 	if err != nil {
-		return "error", "Failed to query posts", nil
+		return "error", "Failed to query events", nil
 	}
 
 	// Print table
-	var posts []Post
+	var events []Event
 	for rows.Next() {
-		var post Post
-		err = rows.Scan(&post.Id, &post.Title, &post.Description, &post.Location, &post.User_id, &post.Latitude, &post.Longitude, &post.Zip, &post.Time_created, &post.Time_expires)
+		var event Event
+		err = rows.Scan(&event.Id, &event.Title, &event.Description, &event.Location, &event.User_id, &event.Latitude, &event.Longitude, &event.Zip, &event.Time_created, &event.Time_expires)
 		if err != nil {
-			return "error", "Failed to retrieve post information", nil
+			return "error", "Failed to retrieve event information", nil
 		}
-		posts = append(posts, post)
+		events = append(events, event)
 	}
 
-	return "success", "Retrieved posts", posts
+	return "success", "Retrieved events", events
 }
 
-func GetPost(id string) (status string, message string, retrievedPost Post) {
+func GetEvent(id string) (status string, message string, retrievedEvent Event) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=$1;", postTableName)
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=$1;", eventTableName)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
 	utilities.Sugar.Infof("Values: %v", id)
 	stmt, err := db.DB.Prepare(queryStr)
 	if err != nil {
-		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), Post{}
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), Event{}
 	}
 	row := stmt.QueryRow(id)
 
-	// Get post info
-	var post Post
-	err = row.Scan(&post.Id, &post.Title, &post.Description, &post.Location, &post.User_id, &post.Latitude, &post.Longitude, &post.Zip, &post.Time_created, &post.Time_expires)
+	// Get event info
+	var event Event
+	err = row.Scan(&event.Id, &event.Title, &event.Description, &event.Location, &event.User_id, &event.Latitude, &event.Longitude, &event.Zip, &event.Time_created, &event.Time_expires)
 	if err != nil {
-		return "error", "Failed to retrieve post information", Post{}
+		return "error", "Failed to retrieve event information", Event{}
 	}
 
-	return "success", "Retrieved post", post
+	return "success", "Retrieved event", event
 }
 
-func UpdatePost(id string, post Post) (status string, message string, updatedPost Post) {
+func UpdateEvent(id string, event Event) (status string, message string, updatedEvent Event) {
 
-	// Get post fields
-	value := reflect.ValueOf(post)
+	// Get event fields
+	value := reflect.ValueOf(event)
 	if value.NumField() <= 0 {
-		return "error", "Invalid number of fields", Post{}
+		return "error", "Invalid number of fields", Event{}
 	}
 
 	// Create query string
 	var queryStr bytes.Buffer
-	queryStr.WriteString(fmt.Sprintf("UPDATE %s SET", postTableName))
+	queryStr.WriteString(fmt.Sprintf("UPDATE %s SET", eventTableName))
 
 	// Set present column names and values
 	var values []interface{}
@@ -239,7 +239,7 @@ func UpdatePost(id string, post Post) (status string, message string, updatedPos
 	for i := 0; i < value.NumField(); i++ {
 		fieldName := value.Type().Field(i).Name
 		fieldValue := value.Field(i).Interface()
-		if postAutoParams[fieldName] {
+		if eventAutoParams[fieldName] {
 			continue
 		}
 		if reflect.DeepEqual(fieldValue, reflect.Zero(reflect.TypeOf(fieldValue)).Interface()) {
@@ -263,25 +263,25 @@ func UpdatePost(id string, post Post) (status string, message string, updatedPos
 	utilities.Sugar.Infof("Values: %v", values)
 	stmt, err := db.DB.Prepare(queryStr.String())
 	if err != nil {
-		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), Post{}
+		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), Event{}
 	}
 	_, err = stmt.Exec(values...)
 	if err != nil {
-		return "error", "Failed to update post", Post{}
+		return "error", "Failed to update event", Event{}
 	}
 
-	status, message, retrievedPost := GetPost(id)
+	status, message, retrievedEvent := GetEvent(id)
 	if status == "success" {
-		return "success", "Updated post", retrievedPost
+		return "success", "Updated event", retrievedEvent
 	} else {
-		return "error", "Failed to retrieve updated post", Post{}
+		return "error", "Failed to retrieve updated event", Event{}
 	}
 }
 
-func DeletePost(id string) (status string, message string) {
+func DeleteEvent(id string) (status string, message string) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("DELETE FROM %s WHERE id=$1;", postTableName)
+	queryStr := fmt.Sprintf("DELETE FROM %s WHERE id=$1;", eventTableName)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
 	utilities.Sugar.Infof("Values: %v", id)
 	stmt, err := db.DB.Prepare(queryStr)
@@ -290,8 +290,8 @@ func DeletePost(id string) (status string, message string) {
 	}
 	_, err = stmt.Exec(id)
 	if err != nil {
-		return "error", "Failed to delete post"
+		return "error", "Failed to delete event"
 	}
 
-	return "success", "Deleted post"
+	return "success", "Deleted event"
 }

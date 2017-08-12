@@ -15,16 +15,16 @@ Join events on-the-fly
 - **[Get user]** GET /users/{id} (Returns: status, message, user)
 - **[Update user]** PUT /users/{id} (Takes: token, user; Returns: status, message, user)
 - **[Delete user]** DELETE /users/{id} (Takes: token; Returns: status, message)
-- **[Get posts a user is attending]** GET /users/{id}/attendance (Returns: status, message, posts)
-- **[Get all posts]** GET /posts (Returns: status, message, posts)
-- **[Create post]** POST /posts (Takes: token, post; Returns: status, message, post)
-- **[Search posts]** POST /posts/search (Takes: post; Returns: status, message, posts)
-- **[Get post]** GET /posts/{id} (Returns: status, message, post)
-- **[Update post]** PUT /posts/{id} (Takes: token, post; Returns: status, message, post}
-- **[Delete post]** DELETE /posts/{id} (Takes: token; Returns: status, message)
-- **[Get post attendees]** GET /posts/{id}/attendees (Returns: status, message, attendees)
-- **[Attend post]** POST /posts/{id}/attend (Takes: token; Returns: status, message, attendee)
-- **[Remove post attendance]** DELETE /posts/{id}/attendance (Takes: token; Returns: status, message)
+- **[Get events a user is attending]** GET /users/{id}/attendance (Returns: status, message, events)
+- **[Get all events]** GET /events (Returns: status, message, events)
+- **[Create event]** POST /events (Takes: token, event; Returns: status, message, event)
+- **[Search events]** POST /events/search (Takes: event; Returns: status, message, events)
+- **[Get event]** GET /events/{id} (Returns: status, message, event)
+- **[Update event]** PUT /events/{id} (Takes: token, event; Returns: status, message, event}
+- **[Delete event]** DELETE /events/{id} (Takes: token; Returns: status, message)
+- **[Get event attendees]** GET /events/{id}/attendees (Returns: status, message, attendees)
+- **[Attend event]** POST /events/{id}/attend (Takes: token; Returns: status, message, attendee)
+- **[Remove event attendance]** DELETE /events/{id}/attendance (Takes: token; Returns: status, message)
 
 # Models
 ```
@@ -40,7 +40,7 @@ type User struct {
 ```
 
 ```
-type Post struct {
+type Event struct {
   Id           int       `valid:"-"`
   Title        string    `valid:"alphanum,required"`
   Location     string    `valid:"alphanum,required"`
@@ -56,7 +56,7 @@ type Post struct {
 ```
 type Attendee struct {
   Id      int `valid:"-"`
-  Post_id int `valid:"-"`
+  Event_id int `valid:"-"`
   User_id int `valid:"-"`
 }
 ```

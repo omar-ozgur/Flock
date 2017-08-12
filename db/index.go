@@ -42,9 +42,9 @@ func InitDB() {
 		utilities.CheckErr(err)
 	}
 
-	_, err = DB.Exec("SELECT * FROM posts")
+	_, err = DB.Exec("SELECT * FROM events")
 	if err != nil {
-		_, err = DB.Exec(`CREATE TABLE posts (
+		_, err = DB.Exec(`CREATE TABLE events (
            id SERIAL,
            title text,
            description text,
@@ -63,7 +63,7 @@ func InitDB() {
 	if err != nil {
 		_, err = DB.Exec(`CREATE TABLE attendees (
            id SERIAL,
-           post_id int,
+           event_id int,
            user_id int
            );`)
 		utilities.CheckErr(err)

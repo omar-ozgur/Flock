@@ -24,16 +24,15 @@ func InitRouter() (n *negroni.Negroni) {
 	r.Handle("/users/{id}", authorizationHandler(controllers.UsersDelete)).Methods("DELETE")
 	r.Handle("/users/{id}/attendance", controllers.UsersAttendance).Methods("GET")
 
-	r.Handle("/posts", controllers.PostsIndex).Methods("GET")
-	r.Handle("/posts", authorizationHandler(controllers.PostsCreate)).Methods("POST")
-	r.Handle("/posts/search", controllers.PostsSearch).Methods("POST")
-	r.Handle("/posts/{id}", controllers.PostsShow).Methods("GET")
-	r.Handle("/posts/{id}", authorizationHandler(controllers.PostsUpdate)).Methods("PUT")
-	r.Handle("/posts/{id}", authorizationHandler(controllers.PostsDelete)).Methods("DELETE")
-
-	r.Handle("/posts/{id}/attendees", controllers.PostsAttendees).Methods("GET")
-	r.Handle("/posts/{id}/attend", authorizationHandler(controllers.PostsAttend)).Methods("POST")
-	r.Handle("/posts/{id}/attendance", authorizationHandler(controllers.PostsDeleteAttendance)).Methods("DELETE")
+	r.Handle("/events", controllers.EventsIndex).Methods("GET")
+	r.Handle("/events", authorizationHandler(controllers.EventsCreate)).Methods("POST")
+	r.Handle("/events/search", controllers.EventsSearch).Methods("POST")
+	r.Handle("/events/{id}", controllers.EventsShow).Methods("GET")
+	r.Handle("/events/{id}", authorizationHandler(controllers.EventsUpdate)).Methods("PUT")
+	r.Handle("/events/{id}", authorizationHandler(controllers.EventsDelete)).Methods("DELETE")
+	r.Handle("/events/{id}/attendees", controllers.EventsAttendees).Methods("GET")
+	r.Handle("/events/{id}/attend", authorizationHandler(controllers.EventsAttend)).Methods("POST")
+	r.Handle("/events/{id}/attendance", authorizationHandler(controllers.EventsDeleteAttendance)).Methods("DELETE")
 
 	//login handling for Facebook
 	r.HandleFunc("/loginWithFB", controllers.LoginWithFacebook).Methods("POST")

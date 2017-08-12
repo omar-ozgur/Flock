@@ -12,16 +12,16 @@ import (
 )
 
 type Attendee struct {
-	Id      int `valid:"-"`
-	Post_id int `valid:"-"`
-	User_id int `valid:"-"`
+	Id       int `valid:"-"`
+	Event_id int `valid:"-"`
+	User_id  int `valid:"-"`
 }
 
 const attendeeTableName = "attendees"
 
 var attendeeAutoParams = map[string]bool{"Id": true}
-var attendeeUniqueParams = map[string]bool{"Post_id": true, "User_id": true}
-var attendeeRequiredParams = map[string]bool{"Post_id": true, "User_id": true}
+var attendeeUniqueParams = map[string]bool{"Event_id": true, "User_id": true}
+var attendeeRequiredParams = map[string]bool{"Event_id": true, "User_id": true}
 
 func CreateAttendee(attendee Attendee) (status string, message string, createdAttendee Attendee) {
 
@@ -101,17 +101,17 @@ func CreateAttendee(attendee Attendee) (status string, message string, createdAt
 	return "success", "New attendee created", attendee
 }
 
-func GetPostAttendees(postId string) (status string, message string, retrievedUsers []User) {
+func GetEventAttendees(eventId string) (status string, message string, retrievedUsers []User) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE post_id=$1;", attendeeTableName)
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE event_id=$1;", attendeeTableName)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
-	utilities.Sugar.Infof("Values: %v", postId)
+	utilities.Sugar.Infof("Values: %v", eventId)
 	stmt, err := db.DB.Prepare(queryStr)
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), nil
 	}
-	rows, err := stmt.Query(postId)
+	rows, err := stmt.Query(eventId)
 	if err != nil {
 		return "error", "Failed to query attendees", nil
 	}
@@ -120,7 +120,7 @@ func GetPostAttendees(postId string) (status string, message string, retrievedUs
 	var users []User
 	for rows.Next() {
 		var attendee Attendee
-		err = rows.Scan(&attendee.Id, &attendee.Post_id, &attendee.User_id)
+		err = rows.Scan(&attendee.Id, &attendee.Event_id, &attendee.User_id)
 		if err != nil {
 			return "error", "Failed to retrieve attendee information", nil
 		}
@@ -136,14 +136,14 @@ func GetPostAttendees(postId string) (status string, message string, retrievedUs
 func DeleteAttendee(attendee Attendee) (status string, message string) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("DELETE FROM %s WHERE post_id=$1 AND user_id=$2;", attendeeTableName)
+	queryStr := fmt.Sprintf("DELETE FROM %s WHERE event_id=$1 AND user_id=$2;", attendeeTableName)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
-	utilities.Sugar.Infof("Values: [%d, %d]", attendee.Post_id, attendee.User_id)
+	utilities.Sugar.Infof("Values: [%d, %d]", attendee.Event_id, attendee.User_id)
 	stmt, err := db.DB.Prepare(queryStr)
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error())
 	}
-	_, err = stmt.Exec(attendee.Post_id, attendee.User_id)
+	_, err = stmt.Exec(attendee.Event_id, attendee.User_id)
 	if err != nil {
 		return "error", "Failed to delete attendee"
 	}
@@ -191,7 +191,7 @@ func SearchAttendees(parameters map[string]interface{}, operator string) (status
 	var attendees []Attendee
 	for rows.Next() {
 		var attendee Attendee
-		err = rows.Scan(&attendee.Id, &attendee.Post_id, &attendee.User_id)
+		err = rows.Scan(&attendee.Id, &attendee.Event_id, &attendee.User_id)
 		if err != nil {
 			return "error", "Failed to retrieve attendee information", nil
 		}
