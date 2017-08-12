@@ -42,5 +42,4 @@ func LoginWithFacebook(w http.ResponseWriter, r *http.Request) {
 		"app_token": app_token,
 	})
 	w.Write(JSON)
-
 }
