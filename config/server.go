@@ -7,10 +7,11 @@ import (
 
 var defaultPort = "3000"
 
+// Get the server port
 func GetPort() string {
-	var port = os.Getenv("PORT")
 
 	// Set a default port if there is nothing in the environment
+	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort
 		utilities.Sugar.Infof("No PORT environment variable detected, defaulting to port %s", port)

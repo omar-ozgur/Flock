@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func CustomMiddleware(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+func LoggingMiddleware(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	utilities.Logger.Info("Started request")
 	next(rw, r)
 	utilities.Logger.Info("Got response")
