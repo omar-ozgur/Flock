@@ -22,7 +22,7 @@ func InitRouter() (n *negroni.Negroni) {
 	r.Handle("/users/{id}", controllers.UsersShow).Methods("GET")
 	r.Handle("/users/{id}", authorizationHandler(controllers.UsersUpdate)).Methods("PUT")
 	r.Handle("/users/{id}", authorizationHandler(controllers.UsersDelete)).Methods("DELETE")
-	r.Handle("/users/{id}/attendance", controllers.UsersAttendance).Methods("GET")
+	r.Handle("/users/{id}/attendance", authorizationHandler(controllers.UsersAttendance)).Methods("GET")
 
 	r.Handle("/events", controllers.EventsIndex).Methods("GET")
 	r.Handle("/events", authorizationHandler(controllers.EventsCreate)).Methods("POST")

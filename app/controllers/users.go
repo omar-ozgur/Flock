@@ -222,6 +222,20 @@ var UsersAttendance = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 	// Get request parameters
 	vars := mux.Vars(r)
 
+	// Get user claims
+	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
+	current_user_id := fmt.Sprintf("%v", claims["user_id"])
+
+	// Check if the current user has permission to view the specified user's event attendance
+	if vars["id"] != current_user_id {
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  "error",
+			"message": "You do not have permission to view this users's event attendance",
+		})
+		w.Write(JSON)
+		return
+	}
+
 	// Get events the user is going to
 	status, message, retrievedEvents := models.GetUserAttendance(vars["id"])
 
