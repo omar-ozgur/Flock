@@ -11,72 +11,72 @@ import (
 	"strconv"
 )
 
-var PostsIndex = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var EventsIndex = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	status, message, retrievedPosts := models.GetPosts()
+	status, message, retrievedEvents := models.GetEvents()
 
 	JSON, _ := json.Marshal(map[string]interface{}{
 		"status":  status,
 		"message": message,
-		"posts":   retrievedPosts,
+		"events":  retrievedEvents,
 	})
 	w.Write(JSON)
 })
 
-var PostsCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var EventsCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
 	current_user_id := fmt.Sprintf("%v", claims["user_id"])
 
-	var post models.Post
+	var event models.Event
 	b, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(b, &post)
+	json.Unmarshal(b, &event)
 
-	status, message, createdPost := models.CreatePost(current_user_id, post)
+	status, message, createdEvent := models.CreateEvent(current_user_id, event)
 
 	JSON, _ := json.Marshal(map[string]interface{}{
 		"status":  status,
 		"message": message,
-		"post":    createdPost,
+		"event":   createdEvent,
 	})
 	w.Write(JSON)
 })
 
-var PostsSearch = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var EventsSearch = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var post models.Post
+	var event models.Event
 	b, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(b, &post)
+	json.Unmarshal(b, &event)
 
-	status, message, retrievedPosts := models.SearchPosts(post)
+	status, message, retrievedEvents := models.SearchEvents(event)
 
 	JSON, _ := json.Marshal(map[string]interface{}{
 		"status":  status,
 		"message": message,
-		"posts":   retrievedPosts,
+		"events":  retrievedEvents,
 	})
 	w.Write(JSON)
 })
 
-var PostsShow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var EventsShow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	vars := mux.Vars(r)
 
-	status, message, retrievedPost := models.GetPost(vars["id"])
+	status, message, retrievedEvent := models.GetEvent(vars["id"])
 
 	JSON, _ := json.Marshal(map[string]interface{}{
 		"status":  status,
 		"message": message,
-		"post":    retrievedPost,
+		"event":   retrievedEvent,
 	})
 	w.Write(JSON)
 })
 
-var PostsUpdate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var EventsUpdate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	vars := mux.Vars(r)
@@ -84,32 +84,32 @@ var PostsUpdate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
 	current_user_id := fmt.Sprintf("%v", claims["user_id"])
 
-	status, message, retrievedPost := models.GetPost(vars["id"])
+	status, message, retrievedEvent := models.GetEvent(vars["id"])
 
-	if current_user_id != fmt.Sprintf("%v", retrievedPost.User_id) {
+	if current_user_id != fmt.Sprintf("%v", retrievedEvent.User_id) {
 		JSON, _ := json.Marshal(map[string]interface{}{
 			"status":  "error",
-			"message": "You do not have permission to edit this post",
+			"message": "You do not have permission to edit this event",
 		})
 		w.Write(JSON)
 		return
 	}
 
-	var post models.Post
+	var event models.Event
 	b, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(b, &post)
+	json.Unmarshal(b, &event)
 
-	status, message, updatedPost := models.UpdatePost(vars["id"], post)
+	status, message, updatedEvent := models.UpdateEvent(vars["id"], event)
 
 	JSON, _ := json.Marshal(map[string]interface{}{
 		"status":  status,
 		"message": message,
-		"post":    updatedPost,
+		"event":   updatedEvent,
 	})
 	w.Write(JSON)
 })
 
-var PostsDelete = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var EventsDelete = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	vars := mux.Vars(r)
@@ -117,18 +117,18 @@ var PostsDelete = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
 	current_user_id := fmt.Sprintf("%v", claims["user_id"])
 
-	status, message, retrievedPost := models.GetPost(vars["id"])
+	status, message, retrievedEvent := models.GetEvent(vars["id"])
 
-	if current_user_id != fmt.Sprintf("%v", retrievedPost.User_id) {
+	if current_user_id != fmt.Sprintf("%v", retrievedEvent.User_id) {
 		JSON, _ := json.Marshal(map[string]interface{}{
 			"status":  "error",
-			"message": "You do not have permission to delete this post",
+			"message": "You do not have permission to delete this event",
 		})
 		w.Write(JSON)
 		return
 	}
 
-	status, message = models.DeletePost(vars["id"])
+	status, message = models.DeleteEvent(vars["id"])
 
 	JSON, _ := json.Marshal(map[string]interface{}{
 		"status":  status,
@@ -137,16 +137,16 @@ var PostsDelete = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	w.Write(JSON)
 })
 
-var PostsAttendees = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var EventsAttendees = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	vars := mux.Vars(r)
 
-	var post models.Post
+	var event models.Event
 	b, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(b, &post)
+	json.Unmarshal(b, &event)
 
-	status, message, retrievedAttendees := models.GetPostAttendees(vars["id"])
+	status, message, retrievedAttendees := models.GetEventAttendees(vars["id"])
 
 	JSON, _ := json.Marshal(map[string]interface{}{
 		"status":    status,
@@ -156,7 +156,7 @@ var PostsAttendees = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	w.Write(JSON)
 })
 
-var PostsAttend = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var EventsAttend = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
@@ -164,10 +164,10 @@ var PostsAttend = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 
 	vars := mux.Vars(r)
 
-	postId, _ := strconv.Atoi(vars["id"])
+	eventId, _ := strconv.Atoi(vars["id"])
 	userId, _ := strconv.Atoi(current_user_id)
 
-	attendee := models.Attendee{Post_id: postId, User_id: userId}
+	attendee := models.Attendee{Event_id: eventId, User_id: userId}
 
 	status, message, createdAttendee := models.CreateAttendee(attendee)
 
@@ -179,7 +179,7 @@ var PostsAttend = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	w.Write(JSON)
 })
 
-var PostsDeleteAttendance = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var EventsDeleteAttendance = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
@@ -187,10 +187,10 @@ var PostsDeleteAttendance = http.HandlerFunc(func(w http.ResponseWriter, r *http
 
 	vars := mux.Vars(r)
 
-	postId, _ := strconv.Atoi(vars["id"])
+	eventId, _ := strconv.Atoi(vars["id"])
 	userId, _ := strconv.Atoi(current_user_id)
 
-	attendee := models.Attendee{Post_id: postId, User_id: userId}
+	attendee := models.Attendee{Event_id: eventId, User_id: userId}
 
 	status, message := models.DeleteAttendee(attendee)
 
