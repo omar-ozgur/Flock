@@ -12,8 +12,6 @@ func InitRouter() (n *negroni.Negroni) {
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/", controllers.PagesIndex).Methods("GET")
-
 	r.Handle("/signup", controllers.UsersCreate).Methods("POST")
 	r.Handle("/login", controllers.UsersLogin).Methods("POST")
 	r.Handle("/profile", authorizationHandler(controllers.UsersProfile)).Methods("Get")
