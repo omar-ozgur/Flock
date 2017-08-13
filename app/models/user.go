@@ -22,15 +22,18 @@ type User struct {
 	First_name   string    `valid:"required"`
 	Last_name    string    `valid:"required"`
 	Email        string    `valid:"email,required"`
-	Fb_id        string    `valid:"-"`
+	Fb_id        string    `valid:"required"`
 	Password     []byte    `valid:"required"`
 	Time_created time.Time `valid:"-"`
 }
 
+// Parameters that are created automatically
 var UserAutoParams = map[string]bool{"Id": true, "Time_created": true}
-var UserUniqueParams = map[string]bool{"Email": true, "Fb_id": true}
-var UserRequiredParams = map[string]bool{"First_name": true, "Last_name": true, "Email": true, "Fb_id": true, "Password": true}
 
+// Parameters that must be unique
+var UserUniqueParams = map[string]bool{"Email": true, "Fb_id": true}
+
+// Create a user
 func CreateUser(user User) (status string, message string, createdUser User) {
 
 	// Encrypt password
@@ -42,9 +45,6 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 
 	// Get user fields
 	value := reflect.ValueOf(user)
-	if value.NumField() <= len(UserRequiredParams) {
-		return "error", "Invalid number of user parameters", User{}
-	}
 
 	// Validate user
 	_, err = govalidator.ValidateStruct(user)
@@ -117,41 +117,6 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 	}
 
 	return "success", "New user created", createdUser
-}
-
-func ProcessFBLogin(first_name string, last_name string, email string, fb_id string) (status string, message string, accessToken string) {
-
-	search_query := make(map[string]interface{})
-
-	search_query["first_name"] = first_name
-	search_query["last_name"] = last_name
-	search_query["email"] = email
-	search_query["fb_id"] = fb_id
-
-	status, message, retrievedUsers := SearchUsers(search_query, "AND")
-	if status != "success" {
-		return "error", message, ""
-	}
-
-	if len(retrievedUsers) == 0 {
-		var user User
-		user.First_name = search_query["first_name"].(string)
-		user.Last_name = search_query["last_name"].(string)
-		user.Email = search_query["email"].(string)
-		user.Fb_id = search_query["fb_id"].(string)
-		user.Password = []byte("Facebook_User")
-
-		status, message, createdUser := CreateUser(user)
-
-		if status != "success" {
-			return "error", message, ""
-		}
-
-		retrievedUsers = append(retrievedUsers, createdUser)
-	}
-
-	return LoginUser(retrievedUsers[0])
-
 }
 
 func LoginUser(user User) (status string, message string, createdToken string) {
@@ -433,4 +398,39 @@ func GetUserAttendance(id string) (status string, message string, retrievedEvent
 	}
 
 	return "success", "Retrieved events", events
+}
+
+// Process Facebook login
+func ProcessFBLogin(first_name string, last_name string, email string, fb_id string) (status string, message string, accessToken string) {
+
+	search_query := make(map[string]interface{})
+
+	search_query["first_name"] = first_name
+	search_query["last_name"] = last_name
+	search_query["email"] = email
+	search_query["fb_id"] = fb_id
+
+	status, message, retrievedUsers := SearchUsers(search_query, "AND")
+	if status != "success" {
+		return "error", message, ""
+	}
+
+	if len(retrievedUsers) == 0 {
+		var user User
+		user.First_name = search_query["first_name"].(string)
+		user.Last_name = search_query["last_name"].(string)
+		user.Email = search_query["email"].(string)
+		user.Fb_id = search_query["fb_id"].(string)
+		user.Password = []byte("Facebook_User")
+
+		status, message, createdUser := CreateUser(user)
+
+		if status != "success" {
+			return "error", message, ""
+		}
+
+		retrievedUsers = append(retrievedUsers, createdUser)
+	}
+
+	return LoginUser(retrievedUsers[0])
 }
