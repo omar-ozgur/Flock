@@ -3,14 +3,13 @@ package middleware
 import (
 	"github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
-	"os"
+	"github.com/omar-ozgur/flock-api/utilities"
 )
 
-var secretKey = []byte(os.Getenv("FLOCK_TOKEN_SECRET"))
-
+// JWT middleware
 var JWTMiddleware = jwtmiddleware.New(jwtmiddleware.Options{
 	ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
-		return secretKey, nil
+		return utilities.FLOCK_TOKEN_SECRET, nil
 	},
 	SigningMethod: jwt.SigningMethodHS256,
 })

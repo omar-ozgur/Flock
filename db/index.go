@@ -7,28 +7,27 @@ import (
 	"os"
 )
 
-const (
-	DB_USER     = "postgres"
-	DB_PASSWORD = "postgres"
-	DB_NAME     = "flock_api"
-	DB_HOST     = "localhost"
-)
-
+// The database object
 var DB *sql.DB
 
+// Initialize the database
 func InitDB() {
+
+	// Get database information
 	DBInfo := os.Getenv("DB_INFO")
 	if DBInfo == "" {
 		DBInfo = fmt.Sprintf("user=%s password=%s dbname=%s host=%s sslmode=disable",
-			DB_USER, DB_PASSWORD, DB_NAME, DB_HOST)
+			utilities.DB_USER, utilities.DB_PASSWORD, utilities.DB_NAME, utilities.DB_HOST)
 	}
-	var err error
-	DB, err = sql.Open("postgres", DBInfo)
+
+	// Open the database
+	DB, err := sql.Open("postgres", DBInfo)
 	utilities.CheckErr(err)
 
-	_, err = DB.Exec("SELECT * FROM users")
+	// Create users table if it doesn't exist
+	_, err = DB.Exec(fmt.Sprintf("SELECT * FROM %s", utilities.USERS_TABLE))
 	if err != nil {
-		_, err = DB.Exec(`CREATE TABLE users (
+		_, err = DB.Exec(fmt.Sprintf(`CREATE TABLE %s (
            id SERIAL,
            first_name text,
            last_name text,
@@ -36,13 +35,14 @@ func InitDB() {
            fb_id text,
            password bytea,
            time_created timestamp DEFAULT now()
-           );`)
+           );`, utilities.USERS_TABLE))
 		utilities.CheckErr(err)
 	}
 
-	_, err = DB.Exec("SELECT * FROM events")
+	// Create events table if it doesn't exist
+	_, err = DB.Exec(fmt.Sprintf("SELECT * FROM %s", utilities.EVENTS_TABLE))
 	if err != nil {
-		_, err = DB.Exec(`CREATE TABLE events (
+		_, err = DB.Exec(fmt.Sprintf(`CREATE TABLE %s (
            id SERIAL,
            title text,
            description text,
@@ -53,17 +53,18 @@ func InitDB() {
            zip int,           
            time_created timestamp DEFAULT now(),
            time_expires timestamp DEFAULT now()
-           );`)
+           );`, utilities.EVENTS_TABLE))
 		utilities.CheckErr(err)
 	}
 
-	_, err = DB.Exec("SELECT * FROM attendees")
+	// Create attendees table if it doesn't exist
+	_, err = DB.Exec(fmt.Sprintf("SELECT * FROM %s", utilities.ATTENDEES_TABLE))
 	if err != nil {
-		_, err = DB.Exec(`CREATE TABLE attendees (
+		_, err = DB.Exec(fmt.Sprintf(`CREATE TABLE %s (
            id SERIAL,
            event_id int,
            user_id int
-           );`)
+           );`, utilities.ATTENDEES_TABLE))
 		utilities.CheckErr(err)
 	}
 }
