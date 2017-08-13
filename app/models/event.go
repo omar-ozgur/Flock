@@ -19,7 +19,7 @@ type Event struct {
 	Title        string    `valid:"required"`
 	Description  string    `valid:"required"`
 	Location     string    `valid:"required"`
-	User_id      int       `valid:"required"`
+	User_id      int       `valid:"-"`
 	Latitude     string    `valid:"latitude,required"`
 	Longitude    string    `valid:"longitude,required"`
 	Zip          int       `valid:"required"`
@@ -27,7 +27,10 @@ type Event struct {
 	Time_expires time.Time `valid:"-"`
 }
 
+// Parameters that are created automatically
 var eventAutoParams = map[string]bool{"Id": true, "User_id": true, "Time_created": true, "Time_expires": true}
+
+// Parameters that are required
 var eventRequiredParams = map[string]bool{"Title": true, "Description": true, "Location": true, "Latitude": true, "Longitude": true, "Zip": true}
 
 func GetEvents() (status string, message string, retrievedEvents []Event) {
@@ -62,9 +65,6 @@ func CreateEvent(userId string, event Event) (status string, message string, cre
 
 	// Get event fields
 	value := reflect.ValueOf(event)
-	if value.NumField() <= len(eventRequiredParams) {
-		return "error", "Invalid event parameters", Event{}
-	}
 
 	// Convert user ID to integer
 	var err error
@@ -73,7 +73,7 @@ func CreateEvent(userId string, event Event) (status string, message string, cre
 		return "error", "Invalid user ID", Event{}
 	}
 
-	// Validate user
+	// Validate event
 	_, err = govalidator.ValidateStruct(event)
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to validate event: %s", err.Error()), Event{}

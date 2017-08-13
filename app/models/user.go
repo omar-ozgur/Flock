@@ -33,6 +33,9 @@ var userAutoParams = map[string]bool{"Id": true, "Time_created": true}
 // Parameters that must be unique
 var userUniqueParams = map[string]bool{"Email": true, "Fb_id": true}
 
+// Parameters that are required
+var eventRequiredParams = map[string]bool{"First_name": true, "Last_name": true, "Email": true, "Fb_id": true, "Password": true}
+
 // Create a user
 func CreateUser(user User) (status string, message string, createdUser User) {
 
