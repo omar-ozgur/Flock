@@ -11,13 +11,12 @@ import (
 	"reflect"
 )
 
+// Attendee model
 type Attendee struct {
 	Id       int `valid:"-"`
 	Event_id int `valid:"-"`
 	User_id  int `valid:"-"`
 }
-
-const attendeeTableName = "attendees"
 
 var attendeeAutoParams = map[string]bool{"Id": true}
 var attendeeUniqueParams = map[string]bool{"Event_id": true, "User_id": true}
@@ -55,7 +54,7 @@ func CreateAttendee(attendee Attendee) (status string, message string, createdAt
 
 	// Create query string
 	var queryStr bytes.Buffer
-	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (", attendeeTableName))
+	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (", utilities.ATTENDEES_TABLE))
 
 	// Set present column names
 	var fieldsStr, valuesStr bytes.Buffer
@@ -104,7 +103,7 @@ func CreateAttendee(attendee Attendee) (status string, message string, createdAt
 func GetEventAttendees(eventId string) (status string, message string, retrievedUsers []User) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE event_id=$1;", attendeeTableName)
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE event_id=$1;", utilities.ATTENDEES_TABLE)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
 	utilities.Sugar.Infof("Values: %v", eventId)
 	stmt, err := db.DB.Prepare(queryStr)
@@ -136,7 +135,7 @@ func GetEventAttendees(eventId string) (status string, message string, retrieved
 func DeleteAttendee(attendee Attendee) (status string, message string) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("DELETE FROM %s WHERE event_id=$1 AND user_id=$2;", attendeeTableName)
+	queryStr := fmt.Sprintf("DELETE FROM %s WHERE event_id=$1 AND user_id=$2;", utilities.ATTENDEES_TABLE)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
 	utilities.Sugar.Infof("Values: [%d, %d]", attendee.Event_id, attendee.User_id)
 	stmt, err := db.DB.Prepare(queryStr)
@@ -157,7 +156,7 @@ func SearchAttendees(parameters map[string]interface{}, operator string) (status
 	var queryStr bytes.Buffer
 
 	// Create and execute query
-	queryStr.WriteString(fmt.Sprintf("SELECT * FROM %s WHERE", attendeeTableName))
+	queryStr.WriteString(fmt.Sprintf("SELECT * FROM %s WHERE", utilities.ATTENDEES_TABLE))
 
 	// Set present column names and values
 	var values []interface{}

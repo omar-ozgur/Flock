@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+// Event model
 type Event struct {
 	Id           int       `valid:"-"`
 	Title        string    `valid:"required"`
@@ -26,15 +27,13 @@ type Event struct {
 	Time_expires time.Time `valid:"-"`
 }
 
-const eventTableName = "events"
-
 var eventAutoParams = map[string]bool{"Id": true, "User_id": true, "Time_created": true, "Time_expires": true}
 var eventRequiredParams = map[string]bool{"Title": true, "Description": true, "Location": true, "Latitude": true, "Longitude": true, "Zip": true}
 
 func GetEvents() (status string, message string, retrievedEvents []Event) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s;", eventTableName)
+	queryStr := fmt.Sprintf("SELECT * FROM %s;", utilities.EVENTS_TABLE)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
 	stmt, err := db.DB.Prepare(queryStr)
 	if err != nil {
@@ -82,7 +81,7 @@ func CreateEvent(userId string, event Event) (status string, message string, cre
 
 	// Create query string
 	var queryStr bytes.Buffer
-	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (", eventTableName))
+	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (", utilities.EVENTS_TABLE))
 
 	// Set present column names
 	var valuesStr bytes.Buffer
@@ -137,7 +136,7 @@ func SearchEvents(event Event) (status string, message string, retrievedEvents [
 
 	// Create query string
 	var queryStr bytes.Buffer
-	queryStr.WriteString(fmt.Sprintf("SELECT * FROM %s WHERE", eventTableName))
+	queryStr.WriteString(fmt.Sprintf("SELECT * FROM %s WHERE", utilities.EVENTS_TABLE))
 
 	// Get event fields
 	value := reflect.ValueOf(event)
@@ -201,7 +200,7 @@ func SearchEvents(event Event) (status string, message string, retrievedEvents [
 func GetEvent(id string) (status string, message string, retrievedEvent Event) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=$1;", eventTableName)
+	queryStr := fmt.Sprintf("SELECT * FROM %s WHERE id=$1;", utilities.EVENTS_TABLE)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
 	utilities.Sugar.Infof("Values: %v", id)
 	stmt, err := db.DB.Prepare(queryStr)
@@ -230,7 +229,7 @@ func UpdateEvent(id string, event Event) (status string, message string, updated
 
 	// Create query string
 	var queryStr bytes.Buffer
-	queryStr.WriteString(fmt.Sprintf("UPDATE %s SET", eventTableName))
+	queryStr.WriteString(fmt.Sprintf("UPDATE %s SET", utilities.EVENTS_TABLE))
 
 	// Set present column names and values
 	var values []interface{}
@@ -281,7 +280,7 @@ func UpdateEvent(id string, event Event) (status string, message string, updated
 func DeleteEvent(id string) (status string, message string) {
 
 	// Create and execute query
-	queryStr := fmt.Sprintf("DELETE FROM %s WHERE id=$1;", eventTableName)
+	queryStr := fmt.Sprintf("DELETE FROM %s WHERE id=$1;", utilities.EVENTS_TABLE)
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
 	utilities.Sugar.Infof("Values: %v", id)
 	stmt, err := db.DB.Prepare(queryStr)
