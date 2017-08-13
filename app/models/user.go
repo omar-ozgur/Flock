@@ -44,7 +44,7 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 	reflections.SetField(&user, "Password", hash)
 
 	// Get user fields
-	value := reflect.ValueOf(user)
+	fields := reflect.ValueOf(user)
 
 	// Validate user
 	_, err = govalidator.ValidateStruct(user)
@@ -77,9 +77,9 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 	var values []interface{}
 	parameterIndex := 1
 	var first = true
-	for i := 0; i < value.NumField(); i++ {
-		fieldName := value.Type().Field(i).Name
-		fieldValue := fmt.Sprintf("%v", value.Field(i).Interface())
+	for i := 0; i < fields.NumField(); i++ {
+		fieldName := fields.Type().Field(i).Name
+		fieldValue := fmt.Sprintf("%v", fields.Field(i).Interface())
 		if UserAutoParams[fieldName] {
 			continue
 		}
@@ -119,6 +119,7 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 	return "success", "New user created", createdUser
 }
 
+// Login a user
 func LoginUser(user User) (status string, message string, createdToken string) {
 
 	// Check login parameter presence
@@ -165,6 +166,7 @@ func LoginUser(user User) (status string, message string, createdToken string) {
 	return "success", "Login token generated", tokenString
 }
 
+// Get a user
 func GetUser(id string) (status string, message string, retrievedUser User) {
 
 	// Create and execute query
@@ -187,6 +189,7 @@ func GetUser(id string) (status string, message string, retrievedUser User) {
 	return "success", "Retrieved user", user
 }
 
+// Get all users
 func GetUsers() (status string, message string, retrievedUsers []User) {
 
 	// Create and execute query
@@ -211,11 +214,12 @@ func GetUsers() (status string, message string, retrievedUsers []User) {
 	return "success", "Retrieved users", users
 }
 
+// Update user
 func UpdateUser(id string, user User) (status string, message string, updatedUser User) {
 
 	// Get user fields
-	value := reflect.ValueOf(user)
-	if value.NumField() <= 0 {
+	fields := reflect.ValueOf(user)
+	if fields.NumField() <= 0 {
 		return "error", "Invalid number of fields", user
 	}
 
@@ -245,9 +249,9 @@ func UpdateUser(id string, user User) (status string, message string, updatedUse
 	var values []interface{}
 	parameterIndex := 1
 	var first = true
-	for i := 0; i < value.NumField(); i++ {
-		fieldName := value.Type().Field(i).Name
-		fieldValue := value.Field(i).Interface()
+	for i := 0; i < fields.NumField(); i++ {
+		fieldName := fields.Type().Field(i).Name
+		fieldValue := fields.Field(i).Interface()
 		if UserAutoParams[fieldName] {
 			continue
 		}
@@ -403,24 +407,24 @@ func GetUserAttendance(id string) (status string, message string, retrievedEvent
 // Process Facebook login
 func ProcessFBLogin(first_name string, last_name string, email string, fb_id string) (status string, message string, accessToken string) {
 
-	search_query := make(map[string]interface{})
+	// Create search query
+	searchQuery := make(map[string]interface{})
+	searchQuery["first_name"] = first_name
+	searchQuery["last_name"] = last_name
+	searchQuery["email"] = email
+	searchQuery["fb_id"] = fb_id
 
-	search_query["first_name"] = first_name
-	search_query["last_name"] = last_name
-	search_query["email"] = email
-	search_query["fb_id"] = fb_id
-
-	status, message, retrievedUsers := SearchUsers(search_query, "AND")
+	status, message, retrievedUsers := SearchUsers(searchQuery, "AND")
 	if status != "success" {
 		return "error", message, ""
 	}
 
 	if len(retrievedUsers) == 0 {
 		var user User
-		user.First_name = search_query["first_name"].(string)
-		user.Last_name = search_query["last_name"].(string)
-		user.Email = search_query["email"].(string)
-		user.Fb_id = search_query["fb_id"].(string)
+		user.First_name = searchQuery["first_name"].(string)
+		user.Last_name = searchQuery["last_name"].(string)
+		user.Email = searchQuery["email"].(string)
+		user.Fb_id = searchQuery["fb_id"].(string)
 		user.Password = []byte("Facebook_User")
 
 		status, message, createdUser := CreateUser(user)
