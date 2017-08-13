@@ -28,10 +28,10 @@ type User struct {
 }
 
 // Parameters that are created automatically
-var UserAutoParams = map[string]bool{"Id": true, "Time_created": true}
+var userAutoParams = map[string]bool{"Id": true, "Time_created": true}
 
 // Parameters that must be unique
-var UserUniqueParams = map[string]bool{"Email": true, "Fb_id": true}
+var userUniqueParams = map[string]bool{"Email": true, "Fb_id": true}
 
 // Create a user
 func CreateUser(user User) (status string, message string, createdUser User) {
@@ -54,7 +54,7 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 
 	// Check user uniqueness
 	uniqueMap := make(map[string]interface{})
-	for key, _ := range UserUniqueParams {
+	for key, _ := range userUniqueParams {
 		fieldValue, err := reflections.GetField(&user, key)
 		if err != nil {
 			return "error", fmt.Sprintf("Failed to get field: %s", err.Error()), User{}
@@ -80,7 +80,7 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 	for i := 0; i < fields.NumField(); i++ {
 		fieldName := fields.Type().Field(i).Name
 		fieldValue := fmt.Sprintf("%v", fields.Field(i).Interface())
-		if UserAutoParams[fieldName] {
+		if userAutoParams[fieldName] {
 			continue
 		}
 		if !first {
@@ -225,7 +225,7 @@ func UpdateUser(id string, user User) (status string, message string, updatedUse
 
 	// Check user uniqueness
 	uniqueMap := make(map[string]interface{})
-	for key, _ := range UserUniqueParams {
+	for key, _ := range userUniqueParams {
 		fieldValue, err := reflections.GetField(&user, key)
 		if err != nil || reflect.DeepEqual(fieldValue, reflect.Zero(reflect.TypeOf(fieldValue)).Interface()) {
 			continue
@@ -252,7 +252,7 @@ func UpdateUser(id string, user User) (status string, message string, updatedUse
 	for i := 0; i < fields.NumField(); i++ {
 		fieldName := fields.Type().Field(i).Name
 		fieldValue := fields.Field(i).Interface()
-		if UserAutoParams[fieldName] {
+		if userAutoParams[fieldName] {
 			continue
 		}
 		if reflect.DeepEqual(fieldValue, reflect.Zero(reflect.TypeOf(fieldValue)).Interface()) {
