@@ -30,10 +30,10 @@ Join events on-the-fly
 ```
 type User struct {
   Id           int       `valid:"-"`
-  First_name   string    `valid:"alphanum,required"`
-  Last_name    string    `valid:"alphanum,required"`
+  First_name   string    `valid:"required"`
+  Last_name    string    `valid:"required"`
   Email        string    `valid:"email,required"`
-  Fb_id        int       `valid:"-"`
+  Fb_id        string    `valid:"-"`
   Password     []byte    `valid:"required"`
   Time_created time.Time `valid:"-"`
 }
@@ -42,9 +42,10 @@ type User struct {
 ```
 type Event struct {
   Id           int       `valid:"-"`
-  Title        string    `valid:"alphanum,required"`
-  Location     string    `valid:"alphanum,required"`
-  User_id      int       `valid:"required"`
+  Title        string    `valid:"required"`
+  Description  string    `valid:"required"`
+  Location     string    `valid:"required"`
+  User_id      int       `valid:"-"`
   Latitude     string    `valid:"latitude,required"`
   Longitude    string    `valid:"longitude,required"`
   Zip          int       `valid:"required"`
@@ -55,8 +56,8 @@ type Event struct {
 
 ```
 type Attendee struct {
-  Id      int `valid:"-"`
-  Event_id int `valid:"-"`
-  User_id int `valid:"-"`
+  Id       int `valid:"-"`
+  Event_id int `valid:"required"`
+  User_id  int `valid:"required"`
 }
 ```
