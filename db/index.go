@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/omar-ozgur/flock-api/utilities"
-	"os"
 )
 
 // The database object
@@ -14,14 +13,14 @@ var DB *sql.DB
 func InitDB() {
 
 	// Get database information
-	DBInfo := os.Getenv("DB_INFO")
-	if DBInfo == "" {
-		DBInfo = fmt.Sprintf("user=%s password=%s dbname=%s host=%s sslmode=disable",
+	if utilities.DB_INFO == "" {
+		utilities.DB_INFO = fmt.Sprintf("user=%s password=%s dbname=%s host=%s sslmode=disable",
 			utilities.DB_USER, utilities.DB_PASSWORD, utilities.DB_NAME, utilities.DB_HOST)
 	}
 
 	// Open the database
-	DB, err := sql.Open("postgres", DBInfo)
+	var err error
+	DB, err = sql.Open("postgres", utilities.DB_INFO)
 	utilities.CheckErr(err)
 
 	// Create users table if it doesn't exist

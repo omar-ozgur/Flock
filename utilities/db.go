@@ -1,6 +1,11 @@
 package utilities
 
+import (
+	"os"
+)
+
 // Database configuration values
+var DB_INFO = os.Getenv("DB_INFO")
 var DB_USER = "postgres"
 var DB_PASSWORD = "postgres"
 var DB_NAME = "flock_api"

@@ -10,11 +10,16 @@ import (
 
 func main() {
 
+	// Initialize the database
 	db.InitDB()
 
+	// Initialize the router
 	n := config.InitRouter()
 
+	// Get the port
 	port := config.GetPort()
+
+	// Start the server
 	utilities.Sugar.Infof("Started server on port %s\n", port)
 	err := http.ListenAndServe(fmt.Sprintf(":%s", port), n)
 	if err != nil {

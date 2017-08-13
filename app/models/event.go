@@ -292,5 +292,15 @@ func DeleteEvent(id string) (status string, message string) {
 		return "error", "Failed to delete event"
 	}
 
+	// Delete the event's attendees
+	attendeeParams := make(map[string]interface{})
+	attendeeParams["Event_id"] = id
+	status, _, retrievedAttendees := SearchAttendees(attendeeParams, "AND")
+	if status == "success" {
+		for _, attendee := range retrievedAttendees {
+			DeleteAttendee(attendee)
+		}
+	}
+
 	return "success", "Deleted event"
 }
