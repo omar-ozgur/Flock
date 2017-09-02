@@ -8,6 +8,6 @@ import (
 func main() {
 
 	// Initialize the application
-	applicationFacade := config.ApplicationFacade{}
-	applicationFacade.Init()
+	application := config.Application{}
+	application.Init()
 }

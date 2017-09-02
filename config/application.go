@@ -4,11 +4,11 @@ import (
 	"github.com/omar-ozgur/flock-api/app/models"
 )
 
-// ApplicationFacade maintains pipelined application logic
-type ApplicationFacade struct{}
+// Application maintains pipelined application logic
+type Application struct{}
 
 // Init initializes the application
-func (ApplicationFacade) Init() {
+func (Application) Init() {
 
 	// Initialize the database
 	db := db{}
