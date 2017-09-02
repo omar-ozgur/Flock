@@ -10,7 +10,7 @@ import (
 type db struct{}
 
 // init initializes the database
-func (db) init() {
+func (*db) init() {
 
 	// Open the database
 	sqlDb, err := sql.Open("postgres", utilities.DB_INFO)

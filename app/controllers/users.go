@@ -11,282 +11,314 @@ import (
 	"net/http"
 )
 
-// UsersCreate creates a new user
-var UsersCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
-
-	// Parse the user from the body
-	user := ParseUser(r)
-
-	// Create the user
-	status, message, createdUser := models.CreateUser(user)
-
-	// Return the response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-		"user":    createdUser,
-	})
-	w.Write(JSON)
-})
-
+// ParseUser parses a user from the body of a request
 func ParseUser(r *http.Request) models.User {
 	var user models.User
 	b, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(b, &user)
-
 	return user
 }
 
-// Login user
-var UsersLogin = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// ParseCurrentUser parses the current user based on authorization information
+// Returns the current user's ID
+func ParseCurrentUser(r *http.Request) string {
+	claims := utilities.GetClaims(
+		r.Header.Get("Authorization")[len("Bearer "):])
+	return fmt.Sprintf("%v", claims["user_id"])
+}
 
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
+// UsersCreate creates a new user
+var UsersCreate = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
 
-	// Retrieve body parameters
-	var user models.User
-	b, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(b, &user)
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
 
-	// Create user
-	status, message, loginToken := models.LoginUser(user)
+		// Parse the user from the body
+		user := ParseUser(r)
 
-	// Return response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-		"token":   loginToken,
-	})
-	w.Write(JSON)
-})
+		// Create the user
+		status, message, createdUser := models.CreateUser(user)
 
-// Get current user's profile
-var UsersProfile = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
-
-	// Get user claims
-	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
-	current_user_id := fmt.Sprintf("%v", claims["user_id"])
-
-	// Get user information
-	status, message, retrievedUser := models.GetUser(current_user_id)
-
-	// Return response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-		"user":    retrievedUser,
-	})
-	w.Write(JSON)
-})
-
-// Get all users
-var UsersIndex = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
-
-	// Get users
-	status, message, retrievedUsers := models.GetUsers()
-
-	// Return response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-		"users":   retrievedUsers,
-	})
-	w.Write(JSON)
-})
-
-// Search for users
-var UsersSearch = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
-
-	// Get body parameters
-	b, _ := ioutil.ReadAll(r.Body)
-	params := make(map[string]interface{})
-	json.Unmarshal(b, &params)
-
-	// Search for users
-	status, message, retrievedUsers := models.SearchUsers(params, "AND")
-
-	// Return response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-		"users":   retrievedUsers,
-	})
-	w.Write(JSON)
-})
-
-// Get a user
-var UsersShow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
-
-	// Get request parameters
-	vars := mux.Vars(r)
-
-	// Get user
-	status, message, retrievedUser := models.GetUser(vars["id"])
-
-	// Return response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-		"user":    retrievedUser,
-	})
-	w.Write(JSON)
-})
-
-// Update a user
-var UsersUpdate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
-
-	// Get body and request parameters
-	var user models.User
-	vars := mux.Vars(r)
-	b, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(b, &user)
-
-	// Get user claims
-	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
-	current_user_id := fmt.Sprintf("%v", claims["user_id"])
-
-	// Check if the current user has permission to update the specified user
-	if vars["id"] != current_user_id {
+		// Return the response
 		JSON, _ := json.Marshal(map[string]interface{}{
-			"status":  "error",
-			"message": "You do not have permission to update this user",
-			"user":    models.User{},
+			"status":  status,
+			"message": message,
+			"user":    createdUser,
 		})
 		w.Write(JSON)
-		return
-	}
+	},
+)
 
-	// Update the user
-	status, message, updatedUser := models.UpdateUser(vars["id"], user)
+// UsersLogin logs a user into the service
+var UsersLogin = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
 
-	// Return response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-		"user":    updatedUser,
-	})
-	w.Write(JSON)
-})
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
 
-// Delete a user
-var UsersDelete = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Parse the user from the body
+		user := ParseUser(r)
 
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
+		// Login the user
+		status, message, loginToken := models.LoginUser(user)
 
-	// Get request parameters
-	vars := mux.Vars(r)
-
-	// Get user claims
-	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
-	current_user_id := fmt.Sprintf("%v", claims["user_id"])
-
-	// Check if the current user has permission to delete the specified user
-	if vars["id"] != current_user_id {
+		// Return the response
 		JSON, _ := json.Marshal(map[string]interface{}{
-			"status":  "error",
-			"message": "You do not have permission to delete this user",
+			"status":  status,
+			"message": message,
+			"token":   loginToken,
 		})
 		w.Write(JSON)
-		return
-	}
+	},
+)
 
-	// Delete the user
-	status, message := models.DeleteUser(vars["id"])
+// UsersProfile returns the current user's information
+var UsersProfile = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
 
-	// Return response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-	})
-	w.Write(JSON)
-})
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
 
-// Get events a user is going to
-var UsersAttendance = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Get the current user's ID
+		currentUserId := ParseCurrentUser(r)
 
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
+		// Get user information
+		status, message, retrievedUser := models.GetUser(currentUserId)
 
-	// Get request parameters
-	vars := mux.Vars(r)
-
-	// Get user claims
-	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
-	current_user_id := fmt.Sprintf("%v", claims["user_id"])
-
-	// Check if the current user has permission to view the specified user's event attendance
-	if vars["id"] != current_user_id {
+		// Return response
 		JSON, _ := json.Marshal(map[string]interface{}{
-			"status":  "error",
-			"message": "You do not have permission to view this users's event attendance",
+			"status":  status,
+			"message": message,
+			"user":    retrievedUser,
 		})
 		w.Write(JSON)
-		return
-	}
+	},
+)
 
-	// Get events the user is going to
-	status, message, retrievedEvents := models.GetUserAttendance(vars["id"])
+// UsersIndex shows the information of all users
+var UsersIndex = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
 
-	// Return response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-		"events":  retrievedEvents,
-	})
-	w.Write(JSON)
-})
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
 
-// Login with Facebook
-var LoginWithFacebook = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Get users
+		status, message, retrievedUsers := models.GetUsers()
 
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
+		// Return response
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  status,
+			"message": message,
+			"users":   retrievedUsers,
+		})
+		w.Write(JSON)
+	},
+)
 
-	// Get body parameters
-	b, _ := ioutil.ReadAll(r.Body)
-	JSONData, _ := jason.NewObjectFromBytes(b)
-	token, _ := JSONData.GetString("token")
+// UsersSearch searches for a user
+var UsersSearch = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
 
-	// Get Facebook response
-	response, _ := http.Get("https://graph.facebook.com/me?access_token=" + token + "&fields=email,first_name,last_name,id,friends")
-	defer response.Body.Close()
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
 
-	// Get user details
-	body, _ := ioutil.ReadAll(response.Body)
-	user, _ := jason.NewObjectFromBytes([]byte(body))
-	first_name, _ := user.GetString("first_name")
-	last_name, _ := user.GetString("last_name")
-	email, _ := user.GetString("email")
-	fb_id, _ := user.GetString("id")
+		// Get body parameters
+		b, _ := ioutil.ReadAll(r.Body)
+		params := make(map[string]interface{})
+		json.Unmarshal(b, &params)
 
-	// Internal Facebook login
-	status, message, app_token := models.ProcessFBLogin(first_name, last_name, email, fb_id)
+		// Search for users with the specified parameters
+		status, message, retrievedUsers := models.SearchUsers(params, "AND")
 
-	// Return a response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":    status,
-		"message":   message,
-		"fb_token":  token,
-		"app_token": app_token,
-	})
-	w.Write(JSON)
-})
+		// Return response
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  status,
+			"message": message,
+			"users":   retrievedUsers,
+		})
+		w.Write(JSON)
+	},
+)
+
+// UsersShow retrieves the information of a specific user
+var UsersShow = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
+
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
+
+		// Get request parameters
+		vars := mux.Vars(r)
+
+		// Get the specified user
+		status, message, retrievedUser := models.GetUser(vars["id"])
+
+		// Return response
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  status,
+			"message": message,
+			"user":    retrievedUser,
+		})
+		w.Write(JSON)
+	},
+)
+
+// UsersUpdate updates the current user
+var UsersUpdate = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
+
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
+
+		// Parse the user from the body
+		user := ParseUser(r)
+
+		// Get request parameters
+		vars := mux.Vars(r)
+
+		// Get the current user's ID
+		currentUserId := ParseCurrentUser(r)
+
+		// Check if the user has permission to update the specified user
+		if vars["id"] != currentUserId {
+			JSON, _ := json.Marshal(map[string]interface{}{
+				"status":  "error",
+				"message": "You do not have permission to update this user",
+				"user":    models.User{},
+			})
+			w.Write(JSON)
+			return
+		}
+
+		// Update the user
+		status, message, updatedUser := models.UpdateUser(vars["id"], user)
+
+		// Return response
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  status,
+			"message": message,
+			"user":    updatedUser,
+		})
+		w.Write(JSON)
+	},
+)
+
+// UsersDelete deletes a specific user
+var UsersDelete = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
+
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
+
+		// Get request parameters
+		vars := mux.Vars(r)
+
+		// Get the current user's ID
+		currentUserId := ParseCurrentUser(r)
+
+		// Check if the user has permission to delete the specified user
+		if vars["id"] != currentUserId {
+			JSON, _ := json.Marshal(map[string]interface{}{
+				"status":  "error",
+				"message": "You do not have permission to delete this user",
+			})
+			w.Write(JSON)
+			return
+		}
+
+		// Delete the user
+		status, message := models.DeleteUser(vars["id"])
+
+		// Return response
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  status,
+			"message": message,
+		})
+		w.Write(JSON)
+	},
+)
+
+// UsersAttendance shows the events that the current user is attending
+var UsersAttendance = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
+
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
+
+		// Get request parameters
+		vars := mux.Vars(r)
+
+		// Get the current user's ID
+		currentUserId := ParseCurrentUser(r)
+
+		// Check if the user has permission to view the
+		// specified user's event attendance
+		if vars["id"] != currentUserId {
+			JSON, _ := json.Marshal(map[string]interface{}{
+				"status": "error",
+				"message": "You do not have permission to" +
+					" view this user's event attendance",
+			})
+			w.Write(JSON)
+			return
+		}
+
+		// Get events the user is going to
+		status, message, retrievedEvents := models.GetUserAttendance(
+			vars["id"])
+
+		// Return response
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  status,
+			"message": message,
+			"events":  retrievedEvents,
+		})
+		w.Write(JSON)
+	},
+)
+
+// LoginWithFacebook logs in with Facebook
+var LoginWithFacebook = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
+
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
+
+		// Get body parameters
+		b, _ := ioutil.ReadAll(r.Body)
+		JSONData, _ := jason.NewObjectFromBytes(b)
+		token, _ := JSONData.GetString("token")
+
+		// Get Facebook response
+		response, _ := http.Get(
+			"https://graph.facebook.com/me?access_token=" +
+				token +
+				"&fields=email,first_name,last_name,id,friends")
+		defer response.Body.Close()
+
+		// Get user details
+		body, _ := ioutil.ReadAll(response.Body)
+		user, _ := jason.NewObjectFromBytes([]byte(body))
+		firstName, _ := user.GetString("first_name")
+		lastName, _ := user.GetString("last_name")
+		email, _ := user.GetString("email")
+		fbId, _ := user.GetString("id")
+
+		// Internal Facebook login
+		status, message, appToken := models.ProcessFBLogin(
+			firstName,
+			lastName,
+			email,
+			fbId)
+
+		// Return a response
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":    status,
+			"message":   message,
+			"fb_token":  token,
+			"app_token": appToken,
+		})
+		w.Write(JSON)
+	},
+)

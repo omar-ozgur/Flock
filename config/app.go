@@ -8,7 +8,7 @@ import (
 type Application struct{}
 
 // Init initializes the application
-func (Application) Init() {
+func (*Application) Init() {
 
 	// Initialize the database
 	db := db{}
@@ -16,12 +16,12 @@ func (Application) Init() {
 
 	// Initialize the router
 	router := router{}
-	negroni := router.init()
+	router.init()
 
 	// Initialize models
 	models.Init()
 
 	// Start the server
 	server := server{}
-	server.start(negroni)
+	server.start(router.middleware.Negroni)
 }

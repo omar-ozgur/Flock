@@ -11,7 +11,7 @@ type Middleware struct {
 }
 
 // init initializes application middleware
-func (m Middleware) Init(r *mux.Router) {
+func (m *Middleware) Init(r *mux.Router) {
 
 	// Create new negroni middleware
 	m.Negroni = negroni.New(

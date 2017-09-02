@@ -4,47 +4,45 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/omar-ozgur/flock-api/app/controllers"
 	"github.com/omar-ozgur/flock-api/middleware"
-	"github.com/urfave/negroni"
 	"net/http"
 )
 
 // router holds application router information
 type router struct {
-	muxRouter *mux.Router
+	muxRouter  *mux.Router
+	middleware middleware.Middleware
 }
 
 // init initializes the router
-func (r router) init() *negroni.Negroni {
+func (r *router) init() {
 
 	// Create routes
 	r.muxRouter = mux.NewRouter()
 	r.createRoutes()
 
 	// Initialize middleware
-	middleware := middleware.Middleware{}
-	middleware.Init(r.muxRouter)
-
-	return middleware.Negroni
+	r.middleware = middleware.Middleware{}
+	r.middleware.Init(r.muxRouter)
 }
 
 // handle registers a path and handler with the router
-func (r router) handle(path string, handler http.Handler) *mux.Route {
+func (r *router) handle(path string, handler http.Handler) *mux.Route {
 	return r.muxRouter.Handle(path, handler)
 }
 
 // authorizationHandler runs authorization middleware for the specified handler
-func (r router) authorizationHandler(handler http.Handler) http.Handler {
+func (r *router) authorizationHandler(handler http.Handler) http.Handler {
 	return middleware.JWTMiddleware.Handler(handler)
 }
 
 // createRoutes creates application routes
-func (r router) createRoutes() {
+func (r *router) createRoutes() {
 	r.createUserRoutes()
 	r.createEventRoutes()
 }
 
 // createUserRoutes creates user routes
-func (r router) createUserRoutes() {
+func (r *router) createUserRoutes() {
 
 	// Signup a new user
 	r.handle(
@@ -108,7 +106,7 @@ func (r router) createUserRoutes() {
 }
 
 // createEventRoutes creates event routes
-func (r router) createEventRoutes() {
+func (r *router) createEventRoutes() {
 
 	// View all events
 	r.handle(

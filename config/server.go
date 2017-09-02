@@ -11,7 +11,7 @@ import (
 type server struct{}
 
 // start starts the application server
-func (server) start(negroni *negroni.Negroni) {
+func (*server) start(negroni *negroni.Negroni) {
 	utilities.Sugar.Infof("Started server on port %s\n", utilities.PORT)
 	err := http.ListenAndServe(fmt.Sprintf(":%s", utilities.PORT), negroni)
 	if err != nil {
