@@ -21,9 +21,10 @@ func (r router) init() *negroni.Negroni {
 	r.createRoutes()
 
 	// Initialize middleware
-	negroni := middleware.Init(r.muxRouter)
+	middleware := middleware.Middleware{}
+	middleware.Init(r.muxRouter)
 
-	return negroni
+	return middleware.Negroni
 }
 
 // handle registers a path and handler with the router

@@ -6,7 +6,7 @@ import (
 	"github.com/omar-ozgur/flock-api/utilities"
 )
 
-// JWT middleware
+// JWTMiddleware is authentication middleware using JSON web tokens
 var JWTMiddleware = jwtmiddleware.New(jwtmiddleware.Options{
 	ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
 		return utilities.FLOCK_TOKEN_SECRET, nil
