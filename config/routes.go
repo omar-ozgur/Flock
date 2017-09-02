@@ -13,7 +13,7 @@ type router struct {
 	muxRouter *mux.Router
 }
 
-// Initialize the router
+// init initializes the router
 func (r router) init() *negroni.Negroni {
 
 	// Create routes
