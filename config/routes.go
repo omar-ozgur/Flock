@@ -5,6 +5,7 @@ import (
 	"github.com/omar-ozgur/flock-api/app/controllers"
 	"github.com/omar-ozgur/flock-api/middleware"
 	"github.com/urfave/negroni"
+	"net/http"
 )
 
 // router holds application router information
@@ -25,109 +26,140 @@ func (r router) init() *negroni.Negroni {
 	return negroni
 }
 
+// handle registers a path and handler with the router
+func (r router) handle(path string, handler http.Handler) *mux.Route {
+	return r.muxRouter.Handle(path, handler)
+}
+
+// authorizationHandler runs authorization middleware for the specified handler
+func (r router) authorizationHandler(handler http.Handler) http.Handler {
+	return middleware.JWTMiddleware.Handler(handler)
+}
+
+// createRoutes creates application routes
 func (r router) createRoutes() {
+	r.createUserRoutes()
+	r.createEventRoutes()
+}
 
-	// Create an authorization handler
-	authorizationHandler := middleware.JWTMiddleware.Handler
+// createUserRoutes creates user routes
+func (r router) createUserRoutes() {
 
-	// Create a hanle function
-	handle := r.muxRouter.Handle
-
-	// Create user routes
-	handle(
+	// Signup a new user
+	r.handle(
 		"/signup",
 		controllers.UsersCreate,
 	).Methods("POST")
 
-	handle(
+	// Login an existing user
+	r.handle(
 		"/login",
 		controllers.UsersLogin,
 	).Methods("POST")
 
-	handle(
+	// View the current user
+	r.handle(
 		"/profile",
-		authorizationHandler(controllers.UsersProfile),
+		r.authorizationHandler(controllers.UsersProfile),
 	).Methods("Get")
 
-	handle(
+	// View all users
+	r.handle(
 		"/users",
 		controllers.UsersIndex,
 	).Methods("GET")
 
-	handle(
+	// Search for a user
+	r.handle(
 		"/users/search",
 		controllers.UsersSearch,
 	).Methods("POST")
 
-	handle(
+	// View a specific user
+	r.handle(
 		"/users/{id}",
 		controllers.UsersShow,
 	).Methods("GET")
 
-	handle(
+	// Update a specific user
+	r.handle(
 		"/users/{id}",
-		authorizationHandler(controllers.UsersUpdate),
+		r.authorizationHandler(controllers.UsersUpdate),
 	).Methods("PUT")
 
-	handle(
+	// Delete a specific user
+	r.handle(
 		"/users/{id}",
-		authorizationHandler(controllers.UsersDelete),
+		r.authorizationHandler(controllers.UsersDelete),
 	).Methods("DELETE")
 
-	handle(
+	// See the current user's attendance
+	r.handle(
 		"/users/{id}/attendance",
-		authorizationHandler(controllers.UsersAttendance),
+		r.authorizationHandler(controllers.UsersAttendance),
 	).Methods("GET")
 
-	// Create event routes
-	handle(
+	// Login with facebook
+	r.handle(
+		"/loginWithFacebook",
+		controllers.LoginWithFacebook,
+	).Methods("POST")
+}
+
+// createEventRoutes creates event routes
+func (r router) createEventRoutes() {
+
+	// View all events
+	r.handle(
 		"/events",
 		controllers.EventsIndex,
 	).Methods("GET")
 
-	handle(
+	// Create an event
+	r.handle(
 		"/events",
-		authorizationHandler(controllers.EventsCreate),
+		r.authorizationHandler(controllers.EventsCreate),
 	).Methods("POST")
 
-	handle(
+	// Search for an event
+	r.handle(
 		"/events/search",
 		controllers.EventsSearch,
 	).Methods("POST")
 
-	handle(
+	// View a specific event
+	r.handle(
 		"/events/{id}",
 		controllers.EventsShow,
 	).Methods("GET")
 
-	handle(
+	// Update a specific event
+	r.handle(
 		"/events/{id}",
-		authorizationHandler(controllers.EventsUpdate),
+		r.authorizationHandler(controllers.EventsUpdate),
 	).Methods("PUT")
 
-	handle(
+	// Delete a specific event
+	r.handle(
 		"/events/{id}",
-		authorizationHandler(controllers.EventsDelete),
+		r.authorizationHandler(controllers.EventsDelete),
 	).Methods("DELETE")
 
-	handle(
+	// View the attendees of a specific event
+	r.handle(
 		"/events/{id}/attendees",
 		controllers.EventsAttendees,
 	).Methods("GET")
 
-	handle(
+	// Have the current user attend a specific event
+	r.handle(
 		"/events/{id}/attend",
-		authorizationHandler(controllers.EventsAttend),
+		r.authorizationHandler(controllers.EventsAttend),
 	).Methods("POST")
 
-	handle(
+	// Remove the current user for a specific event's attendees
+	r.handle(
 		"/events/{id}/attendance",
-		authorizationHandler(controllers.EventsDeleteAttendance),
+		r.authorizationHandler(controllers.EventsDeleteAttendance),
 	).Methods("DELETE")
-
-	// Create login routes
-	handle(
-		"/loginWithFacebook",
-		controllers.LoginWithFacebook,
-	).Methods("POST")
 }
