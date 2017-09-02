@@ -5,10 +5,10 @@ import (
 	"os"
 )
 
-// JWT configuration values
+// FLOCK_TOKEN_SECRET is the flock token secret
 var FLOCK_TOKEN_SECRET = []byte(os.Getenv("FLOCK_TOKEN_SECRET"))
 
-// Get claims from a JWT token
+// GetClaims retrieves claims from a token
 func GetClaims(tokenString string) map[string]interface{} {
 
 	// Check if the token is empty
