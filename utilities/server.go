@@ -23,4 +23,4 @@ var PORT = func() string {
 	}
 
 	return port
-}
+}()

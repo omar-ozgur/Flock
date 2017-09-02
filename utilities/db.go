@@ -43,4 +43,4 @@ var DB_INFO = func() string {
 	}
 
 	return dbInfo
-}
+}()

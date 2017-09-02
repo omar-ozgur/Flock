@@ -11,21 +11,19 @@ import (
 	"net/http"
 )
 
-// Create a new user
+// UsersCreate creates a new user
 var UsersCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 	// Set headers
 	w.Header().Set("Content-Type", "application/json")
 
-	// Retrieve body parameters
-	var user models.User
-	b, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(b, &user)
+	// Parse the user from the body
+	user := ParseUser(r)
 
-	// Create user
+	// Create the user
 	status, message, createdUser := models.CreateUser(user)
 
-	// Return response
+	// Return the response
 	JSON, _ := json.Marshal(map[string]interface{}{
 		"status":  status,
 		"message": message,
@@ -33,6 +31,14 @@ var UsersCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	})
 	w.Write(JSON)
 })
+
+func ParseUser(r *http.Request) models.User {
+	var user models.User
+	b, _ := ioutil.ReadAll(r.Body)
+	json.Unmarshal(b, &user)
+
+	return user
+}
 
 // Login user
 var UsersLogin = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
