@@ -11,17 +11,17 @@ import (
 	"net/http"
 )
 
-// ParseUser parses a user from the body of a request
-func ParseUser(r *http.Request) models.User {
+// parseUser parses a user from the body of a request
+func parseUser(r *http.Request) models.User {
 	var user models.User
 	b, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(b, &user)
 	return user
 }
 
-// ParseCurrentUser parses the current user based on authorization information
+// parseCurrentUser parses the current user based on authorization information
 // Returns the current user's ID
-func ParseCurrentUser(r *http.Request) string {
+func parseCurrentUser(r *http.Request) string {
 	claims := utilities.GetClaims(
 		r.Header.Get("Authorization")[len("Bearer "):])
 	return fmt.Sprintf("%v", claims["user_id"])
@@ -35,7 +35,7 @@ var UsersCreate = http.HandlerFunc(
 		w.Header().Set("Content-Type", "application/json")
 
 		// Parse the user from the body
-		user := ParseUser(r)
+		user := parseUser(r)
 
 		// Create the user
 		status, message, createdUser := models.CreateUser(user)
@@ -58,7 +58,7 @@ var UsersLogin = http.HandlerFunc(
 		w.Header().Set("Content-Type", "application/json")
 
 		// Parse the user from the body
-		user := ParseUser(r)
+		user := parseUser(r)
 
 		// Login the user
 		status, message, loginToken := models.LoginUser(user)
@@ -81,7 +81,7 @@ var UsersProfile = http.HandlerFunc(
 		w.Header().Set("Content-Type", "application/json")
 
 		// Get the current user's ID
-		currentUserId := ParseCurrentUser(r)
+		currentUserId := parseCurrentUser(r)
 
 		// Get user information
 		status, message, retrievedUser := models.GetUser(currentUserId)
@@ -172,13 +172,13 @@ var UsersUpdate = http.HandlerFunc(
 		w.Header().Set("Content-Type", "application/json")
 
 		// Parse the user from the body
-		user := ParseUser(r)
+		user := parseUser(r)
 
 		// Get request parameters
 		vars := mux.Vars(r)
 
 		// Get the current user's ID
-		currentUserId := ParseCurrentUser(r)
+		currentUserId := parseCurrentUser(r)
 
 		// Check if the user has permission to update the specified user
 		if vars["id"] != currentUserId {
@@ -215,7 +215,7 @@ var UsersDelete = http.HandlerFunc(
 		vars := mux.Vars(r)
 
 		// Get the current user's ID
-		currentUserId := ParseCurrentUser(r)
+		currentUserId := parseCurrentUser(r)
 
 		// Check if the user has permission to delete the specified user
 		if vars["id"] != currentUserId {
@@ -250,7 +250,7 @@ var UsersAttendance = http.HandlerFunc(
 		vars := mux.Vars(r)
 
 		// Get the current user's ID
-		currentUserId := ParseCurrentUser(r)
+		currentUserId := parseCurrentUser(r)
 
 		// Check if the user has permission to view the
 		// specified user's event attendance

@@ -5,266 +5,278 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/omar-ozgur/flock-api/app/models"
-	"github.com/omar-ozgur/flock-api/utilities"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 )
 
-// Get all events
-var EventsIndex = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
-
-	// Get events
-	status, message, retrievedEvents := models.GetEvents()
-
-	// Return a response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-		"events":  retrievedEvents,
-	})
-	w.Write(JSON)
-})
-
-// Create an event
-var EventsCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
-
-	// Get user claims
-	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
-	current_user_id := fmt.Sprintf("%v", claims["user_id"])
-
-	// Get body parameters
+// parseEvent parses an event from the body of a request
+func parseEvent(r *http.Request) models.Event {
 	var event models.Event
 	b, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(b, &event)
+	return event
+}
 
-	// Create an event
-	status, message, createdEvent := models.CreateEvent(current_user_id, event)
+// EventsIndex gets information for all events
+var EventsIndex = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
 
-	// Return a response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-		"event":   createdEvent,
-	})
-	w.Write(JSON)
-})
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
 
-// Search for events
-var EventsSearch = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Get events
+		status, message, retrievedEvents := models.GetEvents()
 
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
-
-	// Get body parameters
-	var event models.Event
-	b, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(b, &event)
-
-	// Search for events
-	status, message, retrievedEvents := models.SearchEvents(event)
-
-	// Return a response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-		"events":  retrievedEvents,
-	})
-	w.Write(JSON)
-})
-
-// Get an event
-var EventsShow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
-
-	// Get request parameters
-	vars := mux.Vars(r)
-
-	// Get an event
-	status, message, retrievedEvent := models.GetEvent(vars["id"])
-
-	// Return a response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-		"event":   retrievedEvent,
-	})
-	w.Write(JSON)
-})
-
-// Update an event
-var EventsUpdate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
-
-	// Get request parameters
-	vars := mux.Vars(r)
-
-	// Get user claims
-	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
-	current_user_id := fmt.Sprintf("%v", claims["user_id"])
-
-	// Get an event
-	status, message, retrievedEvent := models.GetEvent(vars["id"])
-
-	// Check if the user has sufficient permissions to update the event
-	if current_user_id != fmt.Sprintf("%v", retrievedEvent.User_id) {
+		// Return a response
 		JSON, _ := json.Marshal(map[string]interface{}{
-			"status":  "error",
-			"message": "You do not have permission to edit this event",
+			"status":  status,
+			"message": message,
+			"events":  retrievedEvents,
 		})
 		w.Write(JSON)
-		return
-	}
+	},
+)
 
-	// Get body parameters
-	var event models.Event
-	b, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(b, &event)
+// EventsCreate creates a new event
+var EventsCreate = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
 
-	// Update the event
-	status, message, updatedEvent := models.UpdateEvent(vars["id"], event)
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
 
-	// Return a response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-		"event":   updatedEvent,
-	})
-	w.Write(JSON)
-})
+		// Get the current user's ID
+		currentUserId := parseCurrentUser(r)
 
-// Delete an event
-var EventsDelete = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Parse the event from the body
+		event := parseEvent(r)
 
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
+		// Create an event
+		status, message, createdEvent := models.CreateEvent(
+			currentUserId,
+			event)
 
-	// Get request parameters
-	vars := mux.Vars(r)
-
-	// Get user claims
-	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
-	current_user_id := fmt.Sprintf("%v", claims["user_id"])
-
-	// Get events
-	status, message, retrievedEvent := models.GetEvent(vars["id"])
-
-	// Check if the user has sufficient permissions to delete the event
-	if current_user_id != fmt.Sprintf("%v", retrievedEvent.User_id) {
+		// Return a response
 		JSON, _ := json.Marshal(map[string]interface{}{
-			"status":  "error",
-			"message": "You do not have permission to delete this event",
+			"status":  status,
+			"message": message,
+			"event":   createdEvent,
 		})
 		w.Write(JSON)
-		return
-	}
+	},
+)
 
-	// Delete the event
-	status, message = models.DeleteEvent(vars["id"])
+// EventsSearch searches for events
+var EventsSearch = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
 
-	// Return a response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-	})
-	w.Write(JSON)
-})
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
 
-// Get event attendees
-var EventsAttendees = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Parse the event from the body
+		event := parseEvent(r)
 
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
+		// Search for events
+		status, message, retrievedEvents := models.SearchEvents(event)
 
-	// Get request parameters
-	vars := mux.Vars(r)
+		// Return a response
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  status,
+			"message": message,
+			"events":  retrievedEvents,
+		})
+		w.Write(JSON)
+	},
+)
 
-	// Get body parameters
-	var event models.Event
-	b, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(b, &event)
+// EventsShow retrieves information for a specific event
+var EventsShow = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
 
-	// Get event attendees
-	status, message, retrievedAttendees := models.GetEventAttendees(vars["id"])
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
 
-	// Return a response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":    status,
-		"message":   message,
-		"attendees": retrievedAttendees,
-	})
-	w.Write(JSON)
-})
+		// Get request parameters
+		vars := mux.Vars(r)
 
-// Attend an event
-var EventsAttend = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Get an event
+		status, message, retrievedEvent := models.GetEvent(vars["id"])
 
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
+		// Return a response
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  status,
+			"message": message,
+			"event":   retrievedEvent,
+		})
+		w.Write(JSON)
+	},
+)
 
-	// Get user claims
-	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
-	current_user_id := fmt.Sprintf("%v", claims["user_id"])
+// EventsUpdate updates a specific event
+var EventsUpdate = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
 
-	// Get request parameters
-	vars := mux.Vars(r)
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
 
-	// Get the event Id
-	eventId, _ := strconv.Atoi(vars["id"])
+		// Get request parameters
+		vars := mux.Vars(r)
 
-	// Get the user Id
-	userId, _ := strconv.Atoi(current_user_id)
+		// Get an event
+		status, message, retrievedEvent := models.GetEvent(vars["id"])
 
-	// Create an attendee
-	attendee := models.Attendee{Event_id: eventId, User_id: userId}
-	status, message, createdAttendee := models.CreateAttendee(attendee)
+		// Get the current user's ID
+		currentUserId := parseCurrentUser(r)
 
-	// Return a response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":   status,
-		"message":  message,
-		"attendee": createdAttendee,
-	})
-	w.Write(JSON)
-})
+		// Check if the user has sufficient permissions to update the event
+		if currentUserId != fmt.Sprintf("%v", retrievedEvent.User_id) {
+			JSON, _ := json.Marshal(map[string]interface{}{
+				"status":  "error",
+				"message": "You do not have permission to edit this event",
+			})
+			w.Write(JSON)
+			return
+		}
 
-// Delete an event attendee
-var EventsDeleteAttendance = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Parse the event from the body
+		event := parseEvent(r)
 
-	// Set headers
-	w.Header().Set("Content-Type", "application/json")
+		// Update the event
+		status, message, updatedEvent := models.UpdateEvent(vars["id"], event)
 
-	// Get user claims
-	claims := utilities.GetClaims(r.Header.Get("Authorization")[len("Bearer "):])
-	current_user_id := fmt.Sprintf("%v", claims["user_id"])
+		// Return a response
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  status,
+			"message": message,
+			"event":   updatedEvent,
+		})
+		w.Write(JSON)
+	},
+)
 
-	// Get request parameters
-	vars := mux.Vars(r)
+// EventsDelete deletes an event
+var EventsDelete = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
 
-	// Get the event Id
-	eventId, _ := strconv.Atoi(vars["id"])
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
 
-	// Get the user Id
-	userId, _ := strconv.Atoi(current_user_id)
+		// Get request parameters
+		vars := mux.Vars(r)
 
-	// Delete the attendee
-	attendee := models.Attendee{Event_id: eventId, User_id: userId}
-	status, message := models.DeleteAttendee(attendee)
+		// Get events
+		status, message, retrievedEvent := models.GetEvent(vars["id"])
 
-	// Return a response
-	JSON, _ := json.Marshal(map[string]interface{}{
-		"status":  status,
-		"message": message,
-	})
-	w.Write(JSON)
-})
+		// Get the current user's ID
+		currentUserId := parseCurrentUser(r)
+
+		// Check if the user has sufficient permissions to delete the event
+		if currentUserId != fmt.Sprintf("%v", retrievedEvent.User_id) {
+			JSON, _ := json.Marshal(map[string]interface{}{
+				"status":  "error",
+				"message": "You do not have permission to delete this event",
+			})
+			w.Write(JSON)
+			return
+		}
+
+		// Delete the event
+		status, message = models.DeleteEvent(vars["id"])
+
+		// Return a response
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  status,
+			"message": message,
+		})
+		w.Write(JSON)
+	},
+)
+
+// EventsAttendees retrieves the attendees of an event
+var EventsAttendees = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
+
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
+
+		// Get request parameters
+		vars := mux.Vars(r)
+
+		// Get event attendees
+		status, message, retrievedAttendees := models.GetEventAttendees(
+			vars["id"])
+
+		// Return a response
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":    status,
+			"message":   message,
+			"attendees": retrievedAttendees,
+		})
+		w.Write(JSON)
+	},
+)
+
+// EventsAttend causes the current user to join a specific event
+var EventsAttend = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
+
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
+
+		// Get the current user's ID
+		currentUserId := parseCurrentUser(r)
+
+		// Get request parameters
+		vars := mux.Vars(r)
+
+		// Get the event Id
+		eventId, _ := strconv.Atoi(vars["id"])
+
+		// Get the user Id
+		userId, _ := strconv.Atoi(currentUserId)
+
+		// Create an attendee
+		attendee := models.Attendee{Event_id: eventId, User_id: userId}
+		status, message, createdAttendee := models.CreateAttendee(attendee)
+
+		// Return a response
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":   status,
+			"message":  message,
+			"attendee": createdAttendee,
+		})
+		w.Write(JSON)
+	},
+)
+
+// EventsDeleteAttendance removes a user from a specific event's attendee list
+var EventsDeleteAttendance = http.HandlerFunc(
+	func(w http.ResponseWriter, r *http.Request) {
+
+		// Set headers
+		w.Header().Set("Content-Type", "application/json")
+
+		// Get the current user's ID
+		currentUserId := parseCurrentUser(r)
+
+		// Get request parameters
+		vars := mux.Vars(r)
+
+		// Get the event Id
+		eventId, _ := strconv.Atoi(vars["id"])
+
+		// Get the user Id
+		userId, _ := strconv.Atoi(currentUserId)
+
+		// Delete the attendee
+		attendee := models.Attendee{Event_id: eventId, User_id: userId}
+		status, message := models.DeleteAttendee(attendee)
+
+		// Return a response
+		JSON, _ := json.Marshal(map[string]interface{}{
+			"status":  status,
+			"message": message,
+		})
+		w.Write(JSON)
+	},
+)
