@@ -250,7 +250,7 @@ var UsersAttendance = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 })
 
 // Login with Facebook
-func LoginWithFacebook(w http.ResponseWriter, r *http.Request) {
+var LoginWithFacebook = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 	// Set headers
 	w.Header().Set("Content-Type", "application/json")
@@ -283,4 +283,4 @@ func LoginWithFacebook(w http.ResponseWriter, r *http.Request) {
 		"app_token": app_token,
 	})
 	w.Write(JSON)
-}
+})

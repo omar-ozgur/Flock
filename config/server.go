@@ -1,18 +1,20 @@
 package config
 
 import (
+	"fmt"
 	"github.com/omar-ozgur/flock-api/utilities"
-	"os"
+	"github.com/urfave/negroni"
+	"net/http"
 )
 
-// Get the server port
-func GetPort() string {
+// server holds application server information
+type server struct{}
 
-	// Set a default port if there is nothing in the environment
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = utilities.DEFAULT_PORT
-		utilities.Sugar.Infof("No PORT environment variable detected, defaulting to port %s", port)
+// start starts the application server
+func (server) start(negroni *negroni.Negroni) {
+	utilities.Sugar.Infof("Started server on port %s\n", utilities.PORT)
+	err := http.ListenAndServe(fmt.Sprintf(":%s", utilities.PORT), negroni)
+	if err != nil {
+		utilities.Logger.Fatal(err.Error())
 	}
-	return port
 }

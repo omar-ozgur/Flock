@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/asaskevich/govalidator"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/omar-ozgur/flock-api/db"
 	"github.com/omar-ozgur/flock-api/utilities"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/oleiade/reflections.v1"
@@ -33,6 +32,25 @@ var userUniqueParams = map[string]bool{"Email": true, "Fb_id": true}
 
 // Parameters that are required
 var userRequiredParams = map[string]bool{"First_name": true, "Last_name": true, "Email": true, "Password": true}
+
+// Initialize users
+func InitUsers() {
+
+	// Create users table if it doesn't exist
+	_, err := Db.Exec(fmt.Sprintf("SELECT * FROM %s", utilities.USERS_TABLE))
+	if err != nil {
+		_, err = Db.Exec(fmt.Sprintf(`CREATE TABLE %s (
+           id SERIAL,
+           first_name text,
+           last_name text,
+           email text,
+           fb_id text,
+           password bytea,
+           time_created timestamp DEFAULT now()
+           );`, utilities.USERS_TABLE))
+		utilities.CheckErr(err)
+	}
+}
 
 // Create a user
 func CreateUser(user User) (status string, message string, createdUser User) {
@@ -116,7 +134,7 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 	utilities.Sugar.Infof("Values: %v", values)
 
 	// Prepare query
-	stmt, err := db.DB.Prepare(queryStr.String())
+	stmt, err := Db.Prepare(queryStr.String())
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), User{}
 	}
@@ -155,7 +173,7 @@ func LoginUser(user User) (status string, message string, createdToken string) {
 	utilities.Sugar.Infof("Values: %v", user.Email)
 
 	// Prepare the query
-	stmt, err := db.DB.Prepare(queryStr)
+	stmt, err := Db.Prepare(queryStr)
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), ""
 	}
@@ -201,7 +219,7 @@ func GetUser(id string) (status string, message string, retrievedUser User) {
 	utilities.Sugar.Infof("Values: %v", id)
 
 	// Prepare the query
-	stmt, err := db.DB.Prepare(queryStr)
+	stmt, err := Db.Prepare(queryStr)
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), User{}
 	}
@@ -229,7 +247,7 @@ func GetUsers() (status string, message string, retrievedUsers []User) {
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
 
 	// Execute the query
-	rows, err := db.DB.Query(queryStr)
+	rows, err := Db.Query(queryStr)
 	if err != nil {
 		return "error", "Failed to query users", nil
 	}
@@ -350,7 +368,7 @@ func UpdateUser(id string, user User) (status string, message string, updatedUse
 	utilities.Sugar.Infof("Values: %v", values)
 
 	// Prepare the query
-	stmt, err := db.DB.Prepare(queryStr.String())
+	stmt, err := Db.Prepare(queryStr.String())
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), User{}
 	}
@@ -381,7 +399,7 @@ func DeleteUser(id string) (status string, message string) {
 	utilities.Sugar.Infof("Values: %v", id)
 
 	// Prepare the query
-	stmt, err := db.DB.Prepare(queryStr)
+	stmt, err := Db.Prepare(queryStr)
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error())
 	}
@@ -452,7 +470,7 @@ func SearchUsers(parameters map[string]interface{}, operator string) (status str
 	utilities.Sugar.Infof("Values: %v", values)
 
 	// Prepare the query
-	stmt, err := db.DB.Prepare(queryStr.String())
+	stmt, err := Db.Prepare(queryStr.String())
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), nil
 	}

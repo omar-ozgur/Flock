@@ -7,43 +7,127 @@ import (
 	"github.com/urfave/negroni"
 )
 
+// router holds application router information
+type router struct {
+	muxRouter *mux.Router
+}
+
 // Initialize the router
-func InitRouter() (n *negroni.Negroni) {
+func (r router) init() *negroni.Negroni {
+
+	// Create routes
+	r.muxRouter = mux.NewRouter()
+	r.createRoutes()
+
+	// Initialize middleware
+	negroni := middleware.Init(r.muxRouter)
+
+	return negroni
+}
+
+func (r router) createRoutes() {
 
 	// Create an authorization handler
 	authorizationHandler := middleware.JWTMiddleware.Handler
 
-	// Create a new router
-	router := mux.NewRouter()
+	// Create a hanle function
+	handle := r.muxRouter.Handle
 
 	// Create user routes
-	router.Handle("/signup", controllers.UsersCreate).Methods("POST")
-	router.Handle("/login", controllers.UsersLogin).Methods("POST")
-	router.Handle("/profile", authorizationHandler(controllers.UsersProfile)).Methods("Get")
-	router.Handle("/users", controllers.UsersIndex).Methods("GET")
-	router.Handle("/users/search", controllers.UsersSearch).Methods("POST")
-	router.Handle("/users/{id}", controllers.UsersShow).Methods("GET")
-	router.Handle("/users/{id}", authorizationHandler(controllers.UsersUpdate)).Methods("PUT")
-	router.Handle("/users/{id}", authorizationHandler(controllers.UsersDelete)).Methods("DELETE")
-	router.Handle("/users/{id}/attendance", authorizationHandler(controllers.UsersAttendance)).Methods("GET")
+	handle(
+		"/signup",
+		controllers.UsersCreate,
+	).Methods("POST")
+
+	handle(
+		"/login",
+		controllers.UsersLogin,
+	).Methods("POST")
+
+	handle(
+		"/profile",
+		authorizationHandler(controllers.UsersProfile),
+	).Methods("Get")
+
+	handle(
+		"/users",
+		controllers.UsersIndex,
+	).Methods("GET")
+
+	handle(
+		"/users/search",
+		controllers.UsersSearch,
+	).Methods("POST")
+
+	handle(
+		"/users/{id}",
+		controllers.UsersShow,
+	).Methods("GET")
+
+	handle(
+		"/users/{id}",
+		authorizationHandler(controllers.UsersUpdate),
+	).Methods("PUT")
+
+	handle(
+		"/users/{id}",
+		authorizationHandler(controllers.UsersDelete),
+	).Methods("DELETE")
+
+	handle(
+		"/users/{id}/attendance",
+		authorizationHandler(controllers.UsersAttendance),
+	).Methods("GET")
 
 	// Create event routes
-	router.Handle("/events", controllers.EventsIndex).Methods("GET")
-	router.Handle("/events", authorizationHandler(controllers.EventsCreate)).Methods("POST")
-	router.Handle("/events/search", controllers.EventsSearch).Methods("POST")
-	router.Handle("/events/{id}", controllers.EventsShow).Methods("GET")
-	router.Handle("/events/{id}", authorizationHandler(controllers.EventsUpdate)).Methods("PUT")
-	router.Handle("/events/{id}", authorizationHandler(controllers.EventsDelete)).Methods("DELETE")
-	router.Handle("/events/{id}/attendees", controllers.EventsAttendees).Methods("GET")
-	router.Handle("/events/{id}/attend", authorizationHandler(controllers.EventsAttend)).Methods("POST")
-	router.Handle("/events/{id}/attendance", authorizationHandler(controllers.EventsDeleteAttendance)).Methods("DELETE")
+	handle(
+		"/events",
+		controllers.EventsIndex,
+	).Methods("GET")
+
+	handle(
+		"/events",
+		authorizationHandler(controllers.EventsCreate),
+	).Methods("POST")
+
+	handle(
+		"/events/search",
+		controllers.EventsSearch,
+	).Methods("POST")
+
+	handle(
+		"/events/{id}",
+		controllers.EventsShow,
+	).Methods("GET")
+
+	handle(
+		"/events/{id}",
+		authorizationHandler(controllers.EventsUpdate),
+	).Methods("PUT")
+
+	handle(
+		"/events/{id}",
+		authorizationHandler(controllers.EventsDelete),
+	).Methods("DELETE")
+
+	handle(
+		"/events/{id}/attendees",
+		controllers.EventsAttendees,
+	).Methods("GET")
+
+	handle(
+		"/events/{id}/attend",
+		authorizationHandler(controllers.EventsAttend),
+	).Methods("POST")
+
+	handle(
+		"/events/{id}/attendance",
+		authorizationHandler(controllers.EventsDeleteAttendance),
+	).Methods("DELETE")
 
 	// Create login routes
-	router.HandleFunc("/loginWithFacebook", controllers.LoginWithFacebook).Methods("POST")
-
-	// Integrate middleware
-	n = negroni.New(negroni.HandlerFunc(middleware.LoggingMiddleware), negroni.NewLogger())
-	n.UseHandler(router)
-
-	return
+	handle(
+		"/loginWithFacebook",
+		controllers.LoginWithFacebook,
+	).Methods("POST")
 }

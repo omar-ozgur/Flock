@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/asaskevich/govalidator"
 	_ "github.com/lib/pq"
-	"github.com/omar-ozgur/flock-api/db"
 	"github.com/omar-ozgur/flock-api/utilities"
 	"gopkg.in/oleiade/reflections.v1"
 	"reflect"
@@ -26,6 +25,21 @@ var attendeeUniqueParams = map[string]bool{"Event_id": true, "User_id": true}
 
 // Parameters that are required
 var attendeeRequiredParams = map[string]bool{"Event_id": true, "User_id": true}
+
+// Initialize attendees
+func InitAttendees() {
+
+	// Create attendees table if it doesn't exist
+	_, err := Db.Exec(fmt.Sprintf("SELECT * FROM %s", utilities.ATTENDEES_TABLE))
+	if err != nil {
+		_, err = Db.Exec(fmt.Sprintf(`CREATE TABLE %s (
+           id SERIAL,
+           event_id int,
+           user_id int
+           );`, utilities.ATTENDEES_TABLE))
+		utilities.CheckErr(err)
+	}
+}
 
 // Create an attendee
 func CreateAttendee(attendee Attendee) (status string, message string, createdAttendee Attendee) {
@@ -111,7 +125,7 @@ func CreateAttendee(attendee Attendee) (status string, message string, createdAt
 	utilities.Sugar.Infof("Values: %v", values)
 
 	// Prepare the query
-	stmt, err := db.DB.Prepare(queryStr.String())
+	stmt, err := Db.Prepare(queryStr.String())
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), Attendee{}
 	}
@@ -136,7 +150,7 @@ func GetEventAttendees(eventId string) (status string, message string, retrieved
 	utilities.Sugar.Infof("Values: %v", eventId)
 
 	// Prepare the query
-	stmt, err := db.DB.Prepare(queryStr)
+	stmt, err := Db.Prepare(queryStr)
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), nil
 	}
@@ -179,7 +193,7 @@ func DeleteAttendee(attendee Attendee) (status string, message string) {
 	utilities.Sugar.Infof("Values: [%d, %d]", attendee.Event_id, attendee.User_id)
 
 	// Prepare the query
-	stmt, err := db.DB.Prepare(queryStr)
+	stmt, err := Db.Prepare(queryStr)
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error())
 	}
@@ -231,7 +245,7 @@ func SearchAttendees(parameters map[string]interface{}, operator string) (status
 	utilities.Sugar.Infof("Values: %v", values)
 
 	// Prepare the query
-	stmt, err := db.DB.Prepare(queryStr.String())
+	stmt, err := Db.Prepare(queryStr.String())
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), nil
 	}

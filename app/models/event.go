@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/asaskevich/govalidator"
 	_ "github.com/lib/pq"
-	"github.com/omar-ozgur/flock-api/db"
 	"github.com/omar-ozgur/flock-api/utilities"
 	"gopkg.in/oleiade/reflections.v1"
 	"reflect"
@@ -33,6 +32,28 @@ var eventAutoParams = map[string]bool{"Id": true, "User_id": true, "Time_created
 // Parameters that are required
 var eventRequiredParams = map[string]bool{"Title": true, "Description": true, "Location": true, "Latitude": true, "Longitude": true, "Zip": true}
 
+// Initialize events
+func InitEvents() {
+
+	// Create events table if it doesn't exist
+	_, err := Db.Exec(fmt.Sprintf("SELECT * FROM %s", utilities.EVENTS_TABLE))
+	if err != nil {
+		_, err = Db.Exec(fmt.Sprintf(`CREATE TABLE %s (
+           id SERIAL,
+           title text,
+           description text,
+           location text,
+           user_id int,
+           latitude text,
+           longitude text,
+           zip int,
+           time_created timestamp DEFAULT now(),
+           time_expires timestamp DEFAULT now()
+           );`, utilities.EVENTS_TABLE))
+		utilities.CheckErr(err)
+	}
+}
+
 // Get all events
 func GetEvents() (status string, message string, retrievedEvents []Event) {
 
@@ -43,7 +64,7 @@ func GetEvents() (status string, message string, retrievedEvents []Event) {
 	utilities.Sugar.Infof("SQL Query: %s", queryStr)
 
 	// Prepare the query
-	stmt, err := db.DB.Prepare(queryStr)
+	stmt, err := Db.Prepare(queryStr)
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), nil
 	}
@@ -139,7 +160,7 @@ func CreateEvent(userId string, event Event) (status string, message string, cre
 	utilities.Sugar.Infof("Values: %v", values)
 
 	// Prepare the query
-	stmt, err := db.DB.Prepare(queryStr.String())
+	stmt, err := Db.Prepare(queryStr.String())
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), Event{}
 	}
@@ -217,7 +238,7 @@ func SearchEvents(event Event) (status string, message string, retrievedEvents [
 	utilities.Sugar.Infof("Values: %v", values)
 
 	// Prepare the query
-	stmt, err := db.DB.Prepare(queryStr.String())
+	stmt, err := Db.Prepare(queryStr.String())
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), nil
 	}
@@ -257,7 +278,7 @@ func GetEvent(id string) (status string, message string, retrievedEvent Event) {
 	utilities.Sugar.Infof("Values: %v", id)
 
 	// Prepare the query
-	stmt, err := db.DB.Prepare(queryStr)
+	stmt, err := Db.Prepare(queryStr)
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), Event{}
 	}
@@ -330,7 +351,7 @@ func UpdateEvent(id string, event Event) (status string, message string, updated
 	utilities.Sugar.Infof("Values: %v", values)
 
 	// Prepare the query
-	stmt, err := db.DB.Prepare(queryStr.String())
+	stmt, err := Db.Prepare(queryStr.String())
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), Event{}
 	}
@@ -361,7 +382,7 @@ func DeleteEvent(id string) (status string, message string) {
 	utilities.Sugar.Infof("Values: %v", id)
 
 	// Prepare the query
-	stmt, err := db.DB.Prepare(queryStr)
+	stmt, err := Db.Prepare(queryStr)
 	if err != nil {
 		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error())
 	}

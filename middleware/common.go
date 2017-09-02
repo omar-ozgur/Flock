@@ -2,9 +2,24 @@ package middleware
 
 import (
 	"fmt"
+	"github.com/gorilla/mux"
 	"github.com/omar-ozgur/flock-api/utilities"
+	"github.com/urfave/negroni"
 	"net/http"
 )
+
+// initMiddleware initializes application middleware
+func Init(r *mux.Router) *negroni.Negroni {
+
+	// Create new negroni middleware
+	negroni := negroni.New(
+		negroni.HandlerFunc(LoggingMiddleware),
+		negroni.NewLogger(),
+	)
+	negroni.UseHandler(r)
+
+	return negroni
+}
 
 // Logging middleware
 func LoggingMiddleware(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
