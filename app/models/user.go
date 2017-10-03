@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// User model
+// User holds data for application users
 type User struct {
 	Id           int       `valid:"-"`
 	First_name   string    `valid:"required"`
@@ -24,19 +24,23 @@ type User struct {
 	Time_created time.Time `valid:"-"`
 }
 
-// Parameters that are created automatically
+// userAutoParams contains arameters that are created automatically
 var userAutoParams = map[string]bool{"Id": true, "Time_created": true}
 
-// Parameters that must be unique
+// userUniqueParams contains parameters that must be unique
 var userUniqueParams = map[string]bool{"Email": true, "Fb_id": true}
 
-// Parameters that are required
-var userRequiredParams = map[string]bool{"First_name": true, "Last_name": true, "Email": true, "Password": true}
+// userRequiredParams contains parameters that are required
+var userRequiredParams = map[string]bool{
+	"First_name": true,
+	"Last_name":  true,
+	"Email":      true,
+	"Password":   true}
 
-// Initialize users
+// InitUsers initializes users
 func InitUsers() {
 
-	// Create users table if it doesn't exist
+	// Create the users table if it doesn't exist
 	_, err := Db.Exec(fmt.Sprintf("SELECT * FROM %s", utilities.USERS_TABLE))
 	if err != nil {
 		_, err = Db.Exec(fmt.Sprintf(`CREATE TABLE %s (
@@ -52,44 +56,77 @@ func InitUsers() {
 	}
 }
 
-// Create a user
-func CreateUser(user User) (status string, message string, createdUser User) {
-
-	// Encrypt password
-	hash, err := bcrypt.GenerateFromPassword(user.Password, bcrypt.DefaultCost)
+// encryptPassword encrypts a password
+func encryptPassword(password []byte) (
+	status string,
+	message string,
+	hash []byte) {
+	hash, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
 	if err != nil {
-		return "error", fmt.Sprintf("Failed to encrypt password: %s", err.Error()), User{}
+		return "error",
+			fmt.Sprintf("Failed to encrypt password: %s", err.Error()),
+			nil
 	}
-	reflections.SetField(&user, "Password", hash)
+	return "success", "", hash
+}
 
-	// Get user fields
-	fields := reflect.ValueOf(user)
-
-	// Validate user
-	_, err = govalidator.ValidateStruct(user)
-	if err != nil {
-		return "error", fmt.Sprintf("Failed to validate user: %s", err.Error()), User{}
+// encryptPassword encrypts a user's password
+func (user *User) encryptPassword() (status string, message string) {
+	status, message, hash := encryptPassword(user.Password)
+	if status == "success" {
+		reflections.SetField(user, "Password", hash)
 	}
+	return status, message
+}
+
+// Get unique parameters from a user
+func (user *User) getUniqueParams() (
+	status string,
+	message string,
+	uniqueParams map[string]interface{}) {
 
 	// Create a map of unique parameter values
-	uniqueMap := make(map[string]interface{})
+	uniqueParams = make(map[string]interface{})
 	for key, _ := range userUniqueParams {
 
 		// Add parameter value to unique map
-		fieldValue, err := reflections.GetField(&user, key)
+		fieldValue, err := reflections.GetField(user, key)
 		if err != nil {
-			return "error", fmt.Sprintf("Failed to get field: %s", err.Error()), User{}
+			return "error",
+				fmt.Sprintf("Failed to get field: %s", err.Error()),
+				nil
 		}
-		uniqueMap[key] = fieldValue
+		uniqueParams[key] = fieldValue
+	}
+
+	return "success", "", uniqueParams
+}
+
+// Check if a user is unique
+func (user *User) checkUniqueness() (status string, message string) {
+
+	// Get unique parameters
+	status, message, uniqueParams := user.getUniqueParams()
+	if status != "success" {
+		return status, message
 	}
 
 	// Search for users with the same unique parameters
-	status, message, retrievedUsers := SearchUsers(uniqueMap, "AND")
+	status, message, retrievedUsers := SearchUsers(uniqueParams, "AND")
 	if status != "success" {
-		return "error", "Failed to check user uniqueness", User{}
+		return status, message
 	} else if retrievedUsers != nil {
-		return "error", "User is not unique", User{}
+		return "error", "User is not unique"
 	}
+
+	return "success", ""
+}
+
+// Create the user in the database
+func (user *User) create() (status string, message string) {
+
+	// Get user fields
+	fields := reflect.ValueOf(*user)
 
 	// Set present column names
 	var fieldsStr, valuesStr bytes.Buffer
@@ -124,10 +161,13 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 
 	// Create query string
 	var queryStr bytes.Buffer
-	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (", utilities.USERS_TABLE))
+	queryStr.WriteString(fmt.Sprintf("INSERT INTO %s (",
+		utilities.USERS_TABLE))
 
 	// Finish query string
-	queryStr.WriteString(fmt.Sprintf("%s) VALUES(%s) RETURNING id;", fieldsStr.String(), valuesStr.String()))
+	queryStr.WriteString(fmt.Sprintf("%s) VALUES(%s) RETURNING id;",
+		fieldsStr.String(),
+		valuesStr.String()))
 
 	// Log query and values
 	utilities.Sugar.Infof("SQL Query: %s", queryStr.String())
@@ -136,13 +176,47 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 	// Prepare query
 	stmt, err := Db.Prepare(queryStr.String())
 	if err != nil {
-		return "error", fmt.Sprintf("Failed to prepare DB query: %s", err.Error()), User{}
+		return "error",
+			fmt.Sprintf("Failed to prepare DB query: %s", err.Error())
 	}
 
 	// Execute query
 	err = stmt.QueryRow(values...).Scan(&user.Id)
 	if err != nil {
-		return "error", fmt.Sprintf("Failed to create new user: %s", err.Error()), User{}
+		return "error",
+			fmt.Sprintf("Failed to create new user: %s", err.Error())
+	}
+
+	return "success", ""
+}
+
+// CreateUser creates a new user
+func CreateUser(user User) (status string, message string, createdUser User) {
+
+	// Encrypt password
+	status, message = user.encryptPassword()
+	if status != "success" {
+		return status, message, User{}
+	}
+
+	// Validate user
+	_, err := govalidator.ValidateStruct(user)
+	if err != nil {
+		return "error",
+			fmt.Sprintf("Failed to validate user: %s", err.Error()),
+			User{}
+	}
+
+	// Check for conflicting users
+	status, message = user.checkUniqueness()
+	if status != "success" {
+		return status, message, User{}
+	}
+
+	// Create the user in the database
+	status, message = user.create()
+	if status != "success" {
+		return status, message, User{}
 	}
 
 	// Get created user
@@ -188,10 +262,9 @@ func LoginUser(user User) (status string, message string, createdToken string) {
 	}
 
 	// Check password
-	var hash []byte
-	hash, err = bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return "error", "Error while encrypting password", ""
+	status, message, hash := encryptPassword(user.Password)
+	if status != "success" {
+		return status, message, ""
 	}
 	err = bcrypt.CompareHashAndPassword(hash, user.Password)
 	if err != nil {
@@ -341,9 +414,9 @@ func UpdateUser(id string, user User) (status string, message string, updatedUse
 		if fieldName == "Password" {
 
 			// Encrypt the password and add it to the query
-			hash, err := bcrypt.GenerateFromPassword([]byte(fieldValue.(string)), bcrypt.DefaultCost)
-			if err != nil {
-				return "error", "Failed to encrypt password", User{}
+			status, message, hash := encryptPassword([]byte(fieldValue.(string)))
+			if status != "success" {
+				return status, message, User{}
 			}
 			queryStr.WriteString(fmt.Sprintf("%v=$%d", fieldName, parameterIndex))
 			values = append(values, hash)
