@@ -7,7 +7,9 @@ import (
 // main is the entry-point for the flock API
 func main() {
 
-	// Initialize the application
-	application := config.Application{}
-	application.Init()
+	// Create a new application
+	application := config.NewApplication()
+
+	// Start the application
+	application.Start()
 }

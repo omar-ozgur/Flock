@@ -10,13 +10,17 @@ type Middleware struct {
 	Negroni *negroni.Negroni
 }
 
-// init initializes application middleware
-func (m *Middleware) Init(r *mux.Router) {
+// NewMiddleware initializes application middleware
+func NewMiddleware(r *mux.Router) *Middleware {
+
+	middleware := Middleware{}
 
 	// Create new negroni middleware
-	m.Negroni = negroni.New(
+	middleware.Negroni = negroni.New(
 		negroni.HandlerFunc(loggingMiddleware),
 		negroni.NewLogger(),
 	)
-	m.Negroni.UseHandler(r)
+	middleware.Negroni.UseHandler(r)
+
+	return &middleware
 }

@@ -10,6 +10,12 @@ import (
 // server holds application server information
 type server struct{}
 
+// NewServer initialized a new server
+func NewServer() *server {
+	server := server{}
+	return &server
+}
+
 // start starts the application server
 func (*server) start(negroni *negroni.Negroni) {
 	utilities.Sugar.Infof("Started server on port %s\n", utilities.PORT)

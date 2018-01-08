@@ -10,155 +10,158 @@ import (
 // router holds application router information
 type router struct {
 	muxRouter  *mux.Router
-	middleware middleware.Middleware
+	middleware *middleware.Middleware
 }
 
-// init initializes the router
-func (r *router) init() {
+// NewRouter initializes a new router
+func NewRouter() *router {
+
+	router := router{}
 
 	// Create routes
-	r.muxRouter = mux.NewRouter()
-	r.createRoutes()
+	router.muxRouter = mux.NewRouter()
+	router.createRoutes()
 
 	// Initialize middleware
-	r.middleware = middleware.Middleware{}
-	r.middleware.Init(r.muxRouter)
+	router.middleware = middleware.NewMiddleware(router.muxRouter)
+
+	return &router
 }
 
 // handle registers a path and handler with the router
-func (r *router) handle(path string, handler http.Handler) *mux.Route {
-	return r.muxRouter.Handle(path, handler)
+func (router *router) handle(path string, handler http.Handler) *mux.Route {
+	return router.muxRouter.Handle(path, handler)
 }
 
 // authorizationHandler runs authorization middleware for the specified handler
-func (r *router) authorizationHandler(handler http.Handler) http.Handler {
+func (router *router) authorizationHandler(handler http.Handler) http.Handler {
 	return middleware.JWTMiddleware.Handler(handler)
 }
 
 // createRoutes creates application routes
-func (r *router) createRoutes() {
-	r.createUserRoutes()
-	r.createEventRoutes()
+func (router *router) createRoutes() {
+	router.createUserRoutes()
+	router.createEventRoutes()
 }
 
 // createUserRoutes creates user routes
-func (r *router) createUserRoutes() {
+func (router *router) createUserRoutes() {
 
 	// Signup a new user
-	r.handle(
+	router.handle(
 		"/signup",
 		controllers.UsersCreate,
 	).Methods("POST")
 
 	// Login an existing user
-	r.handle(
+	router.handle(
 		"/login",
 		controllers.UsersLogin,
 	).Methods("POST")
 
 	// View the current user
-	r.handle(
+	router.handle(
 		"/profile",
-		r.authorizationHandler(controllers.UsersProfile),
+		router.authorizationHandler(controllers.UsersProfile),
 	).Methods("Get")
 
 	// View all users
-	r.handle(
+	router.handle(
 		"/users",
 		controllers.UsersIndex,
 	).Methods("GET")
 
 	// Search for a user
-	r.handle(
+	router.handle(
 		"/users/search",
 		controllers.UsersSearch,
 	).Methods("POST")
 
 	// View a specific user
-	r.handle(
+	router.handle(
 		"/users/{id}",
 		controllers.UsersShow,
 	).Methods("GET")
 
 	// Update a specific user
-	r.handle(
+	router.handle(
 		"/users/{id}",
-		r.authorizationHandler(controllers.UsersUpdate),
+		router.authorizationHandler(controllers.UsersUpdate),
 	).Methods("PUT")
 
 	// Delete a specific user
-	r.handle(
+	router.handle(
 		"/users/{id}",
-		r.authorizationHandler(controllers.UsersDelete),
+		router.authorizationHandler(controllers.UsersDelete),
 	).Methods("DELETE")
 
 	// See the current user's attendance
-	r.handle(
+	router.handle(
 		"/users/{id}/attendance",
-		r.authorizationHandler(controllers.UsersAttendance),
+		router.authorizationHandler(controllers.UsersAttendance),
 	).Methods("GET")
 
 	// Login with facebook
-	r.handle(
+	router.handle(
 		"/loginWithFacebook",
 		controllers.LoginWithFacebook,
 	).Methods("POST")
 }
 
 // createEventRoutes creates event routes
-func (r *router) createEventRoutes() {
+func (router *router) createEventRoutes() {
 
 	// View all events
-	r.handle(
+	router.handle(
 		"/events",
 		controllers.EventsIndex,
 	).Methods("GET")
 
 	// Create an event
-	r.handle(
+	router.handle(
 		"/events",
-		r.authorizationHandler(controllers.EventsCreate),
+		router.authorizationHandler(controllers.EventsCreate),
 	).Methods("POST")
 
 	// Search for an event
-	r.handle(
+	router.handle(
 		"/events/search",
 		controllers.EventsSearch,
 	).Methods("POST")
 
 	// View a specific event
-	r.handle(
+	router.handle(
 		"/events/{id}",
 		controllers.EventsShow,
 	).Methods("GET")
 
 	// Update a specific event
-	r.handle(
+	router.handle(
 		"/events/{id}",
-		r.authorizationHandler(controllers.EventsUpdate),
+		router.authorizationHandler(controllers.EventsUpdate),
 	).Methods("PUT")
 
 	// Delete a specific event
-	r.handle(
+	router.handle(
 		"/events/{id}",
-		r.authorizationHandler(controllers.EventsDelete),
+		router.authorizationHandler(controllers.EventsDelete),
 	).Methods("DELETE")
 
 	// View the attendees of a specific event
-	r.handle(
+	router.handle(
 		"/events/{id}/attendees",
 		controllers.EventsAttendees,
 	).Methods("GET")
 
 	// Have the current user attend a specific event
-	r.handle(
+	router.handle(
 		"/events/{id}/attend",
-		r.authorizationHandler(controllers.EventsAttend),
+		router.authorizationHandler(controllers.EventsAttend),
 	).Methods("POST")
 
 	// Remove the current user for a specific event's attendees
-	r.handle(
+	router.handle(
 		"/events/{id}/attendance",
-		r.authorizationHandler(controllers.EventsDeleteAttendance),
+		router.authorizationHandler(controllers.EventsDeleteAttendance),
 	).Methods("DELETE")
 }

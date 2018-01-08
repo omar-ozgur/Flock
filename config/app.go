@@ -5,23 +5,35 @@ import (
 )
 
 // Application maintains pipelined application logic
-type Application struct{}
+type Application struct {
+	db     *db
+	router *router
+	server *server
+}
 
-// Init initializes the application
-func (*Application) Init() {
+// NewApplication initializes a new application
+func NewApplication() *Application {
 
-	// Initialize the database
-	db := db{}
-	db.init()
+	application := Application{}
 
-	// Initialize the router
-	router := router{}
-	router.init()
+	// Create a new database
+	application.db = NewDb()
+
+	// Create a new router
+	application.router = NewRouter()
+
+	// Create a new server
+	application.server = NewServer()
 
 	// Initialize models
 	models.Init()
 
+	return &application
+}
+
+// Start starts the application
+func (application *Application) Start() {
+
 	// Start the server
-	server := server{}
-	server.start(router.middleware.Negroni)
+	application.server.start(application.router.middleware.Negroni)
 }

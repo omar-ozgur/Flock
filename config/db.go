@@ -9,8 +9,10 @@ import (
 // db holds application database information
 type db struct{}
 
-// init initializes the database
-func (*db) init() {
+// NewDb initializes a new database
+func NewDb() *db {
+
+	db := db{}
 
 	// Open the database
 	sqlDb, err := sql.Open("postgres", utilities.DB_INFO)
@@ -18,4 +20,6 @@ func (*db) init() {
 
 	// Set the model db object
 	models.SetDb(sqlDb)
+
+	return &db
 }
