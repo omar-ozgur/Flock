@@ -20,7 +20,7 @@ type User struct {
 	Last_name    string    `valid:"required"`
 	Email        string    `valid:"email,required"`
 	Fb_id        string    `valid:"-"`
-	Password     []byte    `valid:"required"`
+	Password     string    `valid:"required"`
 	Time_created time.Time `valid:"-"`
 }
 
@@ -57,11 +57,11 @@ func InitUsers() {
 }
 
 // encryptPassword encrypts a password
-func encryptPassword(password []byte) (
+func encryptPassword(password string) (
 	status string,
 	message string,
 	hash []byte) {
-	hash, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "error",
 			fmt.Sprintf("Failed to encrypt password: %s", err.Error()),
@@ -74,7 +74,7 @@ func encryptPassword(password []byte) (
 func (user *User) encryptPassword() (status string, message string) {
 	status, message, hash := encryptPassword(user.Password)
 	if status == "success" {
-		reflections.SetField(user, "Password", hash)
+		reflections.SetField(user, "Password", string(hash))
 	}
 	return status, message
 }
@@ -234,8 +234,6 @@ func LoginUser(user User) (status string, message string, createdToken string) {
 	// Check login parameter presence
 	if user.Email == "" {
 		return "error", "Email cannot be blank", ""
-	} else if len(user.Password) == 0 {
-		return "error", "Password cannot be blank", ""
 	}
 
 	// Create a query to find a user
@@ -262,11 +260,7 @@ func LoginUser(user User) (status string, message string, createdToken string) {
 	}
 
 	// Check password
-	status, message, hash := encryptPassword(user.Password)
-	if status != "success" {
-		return status, message, ""
-	}
-	err = bcrypt.CompareHashAndPassword(hash, user.Password)
+	err = bcrypt.CompareHashAndPassword([]byte(foundUser.Password), []byte(user.Password))
 	if err != nil {
 		return "error", "Error while checking password", ""
 	}
@@ -414,7 +408,7 @@ func UpdateUser(id string, user User) (status string, message string, updatedUse
 		if fieldName == "Password" {
 
 			// Encrypt the password and add it to the query
-			status, message, hash := encryptPassword([]byte(fieldValue.(string)))
+			status, message, hash := encryptPassword(fieldValue.(string))
 			if status != "success" {
 				return status, message, User{}
 			}
@@ -625,7 +619,7 @@ func ProcessFBLogin(first_name string, last_name string, email string, fb_id str
 		user.Last_name = searchQuery["last_name"].(string)
 		user.Email = searchQuery["email"].(string)
 		user.Fb_id = searchQuery["fb_id"].(string)
-		user.Password = []byte("Facebook_User")
+		user.Password = "Facebook_User"
 
 		// Create the user
 		status, message, createdUser := CreateUser(user)
