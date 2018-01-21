@@ -11,7 +11,6 @@ type db struct{}
 
 // NewDb initializes a new database
 func NewDb() *db {
-
 	db := db{}
 
 	// Open the database

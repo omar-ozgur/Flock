@@ -15,7 +15,6 @@ type router struct {
 
 // NewRouter initializes a new router
 func NewRouter() *router {
-
 	router := router{}
 
 	// Create routes

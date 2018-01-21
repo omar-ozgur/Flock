@@ -13,7 +13,6 @@ type Application struct {
 
 // NewApplication initializes a new application
 func NewApplication() *Application {
-
 	application := Application{}
 
 	// Create a new database

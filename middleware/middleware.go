@@ -12,7 +12,6 @@ type Middleware struct {
 
 // NewMiddleware initializes application middleware
 func NewMiddleware(r *mux.Router) *Middleware {
-
 	middleware := Middleware{}
 
 	// Create new negroni middleware
