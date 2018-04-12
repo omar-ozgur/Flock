@@ -23,18 +23,19 @@ func Init() {
 
 // EncryptText encrypts text
 func EncryptText(text string) (status string, message string, hash []byte) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(text), bcrypt.DefaultCost)
-	if err != nil {
+	var err error
+	if hash, err = bcrypt.GenerateFromPassword([]byte(text), bcrypt.DefaultCost); err != nil {
 		return "error", fmt.Sprintf("Failed to encrypt text: %s", err.Error()), nil
 	}
+
 	return "success", "Successfully encrypted the text", hash
 }
 
 // CheckValid checks if the model is valid
 func CheckValid(object interface{}) (status string, message string) {
-	_, err := govalidator.ValidateStruct(object)
-	if err != nil {
+	if _, err := govalidator.ValidateStruct(object); err != nil {
 		return "error", fmt.Sprintf("Failed to validate: %s", err.Error())
 	}
+
 	return "success", ""
 }

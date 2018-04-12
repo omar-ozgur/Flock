@@ -1,7 +1,6 @@
 package models
 
 import (
-	"github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
 	"github.com/omar-ozgur/flock-api/utilities"
 	"golang.org/x/crypto/bcrypt"
@@ -28,47 +27,47 @@ func InitUsers() {
 
 // EncryptPassword encrypts a user's password
 func (user *User) EncryptPassword() (status string, message string) {
-
-	// Encrypt the text
-	status, message, hash := EncryptText(user.Password)
-	if status == "success" {
-		reflections.SetField(user, "Password", string(hash))
+	var hash []byte
+	if status, message, hash = EncryptText(user.Password); status != "success" {
+		return status, message
 	}
 
-	return status, message
+	reflections.SetField(user, "Password", string(hash))
+	return "success", "Successfully encrypted the password"
 }
 
 // CreateUser creates a new user
 func CreateUser(user User) (status string, message string, createdUser User) {
 
+	// Begin the transaction
+	tx := Db.Begin()
+
 	// Check if the user is valid
-	status, message = CheckValid(user)
-	if status != "success" {
+	if status, message = CheckValid(user); status != "success" {
 		return status, message, User{}
 	}
 
 	// Encrypt password
-	status, message = user.EncryptPassword()
-	if status != "success" {
+	if status, message = user.EncryptPassword(); status != "success" {
 		return status, message, User{}
 	}
 
 	// Create the user in the database
-	Db.Create(&user)
-	createdUser = user
-	if createdUser.ID == 0 {
+	if err := tx.Create(&user).Error; err != nil {
+		tx.Rollback()
 		return "error", "Failed to create user", User{}
 	}
 
-	return "success", "New user created", createdUser
+	// Commit the transaction
+	tx.Commit()
+	return "success", "New user created", user
 }
 
 // GetUser gets a specific user
 func GetUser(id string) (status string, message string, retrievedUser User) {
 
 	// Find the user
-	Db.First(&retrievedUser, id)
-	if retrievedUser.ID == 0 {
+	if err := Db.First(&retrievedUser, id).Error; err != nil {
 		return "error", "Failed to retrieve user", User{}
 	}
 
@@ -79,8 +78,7 @@ func GetUser(id string) (status string, message string, retrievedUser User) {
 func GetUsers() (status string, message string, retrievedUsers []User) {
 
 	// Find all users
-	Db.Find(&retrievedUsers)
-	if len(retrievedUsers) <= 0 {
+	if err := Db.Find(&retrievedUsers).Error; err != nil {
 		return "error", "Failed to retrieve users", nil
 	}
 
@@ -91,8 +89,7 @@ func GetUsers() (status string, message string, retrievedUsers []User) {
 func SearchUsers(params map[string]interface{}) (status string, message string, retrievedUsers []User) {
 
 	// Search for users
-	Db.Where(params).First(&retrievedUsers)
-	if len(retrievedUsers) <= 0 {
+	if err := Db.Where(params).First(&retrievedUsers).Error; err != nil {
 		return "error", "Failed to retrieve users", nil
 	}
 
@@ -102,102 +99,120 @@ func SearchUsers(params map[string]interface{}) (status string, message string, 
 // UpdateUser updates a user
 func UpdateUser(id string, params map[string]interface{}) (status string, message string, updatedUser User) {
 
+	// Begin the transaction
+	tx := Db.Begin()
+
 	// Find the existing user
-	status, message, retrievedUser := GetUser(id)
-	if status != "success" {
+	var retrievedUser User
+	if status, message, retrievedUser = GetUser(id); status != "success" {
 		return status, message, User{}
 	}
 
 	// Set changed parameters
 	for key, value := range params {
-
-		// Check for password change
-		if key == "Password" {
-			continue
+		if err := reflections.SetField(&retrievedUser, key, value); err != nil {
+			return "error", "Failed to set updated field", User{}
 		}
-
-		// Set updated field values
-		err := reflections.SetField(&retrievedUser, key, value)
-		if err != nil {
-			return "error", err.Error(), User{}
-		}
-	}
-
-	// Set the password if it was changed
-	var changedPassword = false
-	if _, exists := params["Password"]; exists {
-		retrievedUser.Password = params["Password"].(string)
-		changedPassword = true
 	}
 
 	// Check if the user is valid
-	status, message = CheckValid(retrievedUser)
-	if status != "success" {
+	if status, message = CheckValid(retrievedUser); status != "success" {
 		return status, message, User{}
 	}
 
 	// Encrypt the password if it was changed
-	if changedPassword {
-		status, message := retrievedUser.EncryptPassword()
-		if status != "success" {
+	if _, exists := params["Password"]; exists {
+		if status, message := retrievedUser.EncryptPassword(); status != "success" {
 			return status, message, User{}
 		}
 	}
 
 	// Update the user
-	Db.Model(&retrievedUser).Updates(retrievedUser)
+	if err := tx.Model(&retrievedUser).Updates(retrievedUser).Error; err != nil {
+		tx.Rollback()
+		return "error", "Failed to update user", User{}
+	}
 
 	// Get the updated user
-	Db.First(&updatedUser, id)
+	if err := tx.First(&updatedUser, id).Error; err != nil {
+		tx.Rollback()
+		return "error", "Failed to retrieve updated user", User{}
+	}
 
+	// Commit the transaction
+	tx.Commit()
 	return "success", "Updated user", updatedUser
 }
 
 // DeleteUser deletes a user
 func DeleteUser(id string) (status string, message string) {
 
+	// Begin the transaction
+	tx := Db.Begin()
+
 	// Find the user
-	status, message, retrievedUser := GetUser(id)
-	if status != "success" {
+	var retrievedUser User
+	if status, message, retrievedUser = GetUser(id); status != "success" {
 		return status, message
 	}
 
 	// Find related events
 	var events []Event
-	Db.Model(&retrievedUser).Related(&events)
+	if err := tx.Model(&retrievedUser).Related(&events).Error; err != nil {
+		return "error", "Failed to retrieve related events"
+	}
 
 	// Delete related events
 	for _, event := range events {
-		Db.Unscoped().Delete(&event)
+		if err := tx.Unscoped().Delete(&event).Error; err != nil {
+			tx.Rollback()
+			return "error", "Failed to delete related events"
+		}
 	}
 
 	// Delete attendances
-	Db.Model(&retrievedUser).Association("Attendances").Clear()
+	if err := tx.Model(&retrievedUser).Association("Attendances").Clear().Error; err != nil {
+		tx.Rollback()
+		return "error", "Failed to delete attendances"
+	}
 
 	// Delete the user
-	Db.Unscoped().Delete(&retrievedUser)
+	if err := tx.Unscoped().Delete(&retrievedUser).Error; err != nil {
+		tx.Rollback()
+		return "error", "Failed to delete the user"
+	}
 
+	// Commit the transaction
+	tx.Commit()
 	return "success", "Deleted user"
 }
 
 // CreateAttendance adds the specified user as an attendee for the event
 func CreateAttendance(userId string, eventId string) (status string, message string) {
 
+	// Begin the transaction
+	tx := Db.Begin()
+
 	// Get the user
-	status, message, retrievedUser := GetUser(userId)
-	if status != "success" {
+	var retrievedUser User
+	if status, message, retrievedUser = GetUser(userId); status != "success" {
 		return status, message
 	}
 
 	// Get the event
-	status, message, retrievedEvent := GetEvent(eventId)
-	if status != "success" {
+	var retrievedEvent Event
+	if status, message, retrievedEvent = GetEvent(eventId); status != "success" {
 		return status, message
 	}
 
 	// Create attendance
-	Db.Model(&retrievedUser).Association("Attendances").Append(retrievedEvent)
+	if err := tx.Model(&retrievedUser).Association("Attendances").Append(retrievedEvent).Error; err != nil {
+		tx.Rollback()
+		return "error", "Failed to create attendance"
+	}
 
+	// Commit the transaction
+	tx.Commit()
 	return "success", "Attendance was successfully recorded"
 }
 
@@ -205,13 +220,15 @@ func CreateAttendance(userId string, eventId string) (status string, message str
 func GetUserAttendance(userId string) (status string, message string, retrievedEvents []Event) {
 
 	// Get the user
-	status, message, retrievedUser := GetUser(userId)
-	if status != "success" {
+	var retrievedUser User
+	if status, message, retrievedUser = GetUser(userId); status != "success" {
 		return status, message, nil
 	}
 
 	// Find events
-	Db.Model(&retrievedUser).Association("Attendances").Find(&retrievedEvents)
+	if err := Db.Model(&retrievedUser).Association("Attendances").Find(&retrievedEvents).Error; err != nil {
+		return "error", "Failed to retrieve events", nil
+	}
 
 	return "success", "Retrieved events", retrievedEvents
 }
@@ -219,21 +236,29 @@ func GetUserAttendance(userId string) (status string, message string, retrievedE
 // DeleteAttendance removes the specified user from the event's attendee list
 func DeleteAttendance(userId string, eventId string) (status string, message string) {
 
+	// Begin the transaction
+	tx := Db.Begin()
+
 	// Get the user
-	status, message, retrievedUser := GetUser(userId)
-	if status != "success" {
+	var retrievedUser User
+	if status, message, retrievedUser = GetUser(userId); status != "success" {
 		return status, message
 	}
 
 	// Get the event
-	status, message, retrievedEvent := GetEvent(eventId)
-	if status != "success" {
+	var retrievedEvent Event
+	if status, message, retrievedEvent = GetEvent(eventId); status != "success" {
 		return status, message
 	}
 
 	// Delete attendance
-	Db.Model(&retrievedUser).Association("Attendances").Delete(retrievedEvent)
+	if err := tx.Model(&retrievedUser).Association("Attendances").Delete(retrievedEvent).Error; err != nil {
+		tx.Rollback()
+		return "error", "Failed to delete attendance"
+	}
 
+	// Commit the transaction
+	tx.Commit()
 	return "success", "Attendance was successfully deleted"
 }
 
@@ -247,20 +272,20 @@ func LoginUser(user User) (status string, message string, createdToken string) {
 
 	// Find the user
 	var retrievedUser User
-	Db.Where("email = ?", user.Email).First(&retrievedUser)
+	if err := Db.Where("email = ?", user.Email).First(&retrievedUser).Error; err != nil {
+		return "error", "Failed to retrieve the user", ""
+	}
 
 	// Check password
-	err := bcrypt.CompareHashAndPassword([]byte(retrievedUser.Password), []byte(user.Password))
-	if err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(retrievedUser.Password), []byte(user.Password)); err != nil {
 		return "error", "Error while checking password", ""
 	}
 
-	// Create JWT token
-	token := jwt.New(jwt.SigningMethodHS256)
-	claims := token.Claims.(jwt.MapClaims)
+	// Create a new token
+	claims := make(map[string]interface{})
 	claims["user_id"] = retrievedUser.ID
 	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
-	tokenString, _ := token.SignedString(utilities.FLOCK_TOKEN_SECRET)
+	tokenString := utilities.CreateToken(claims)
 
 	return "success", "Login token generated", tokenString
 }
@@ -276,9 +301,9 @@ func ProcessFBLogin(first_name string, last_name string, email string, fb_id str
 	searchQuery["fb_id"] = fb_id
 
 	// Search for users with the specified fields
-	status, message, retrievedUsers := SearchUsers(searchQuery)
-	if status != "success" {
-		return "error", message, ""
+	var retrievedUsers []User
+	if status, message, retrievedUsers = SearchUsers(searchQuery); status != "success" {
+		return status, message, ""
 	}
 
 	// If the user doesn't exist, create it
@@ -293,9 +318,9 @@ func ProcessFBLogin(first_name string, last_name string, email string, fb_id str
 		user.Password = "Facebook_User"
 
 		// Create the user
-		status, message, createdUser := CreateUser(user)
-		if status != "success" {
-			return "error", message, ""
+		var createdUser User
+		if status, message, createdUser = CreateUser(user); status != "success" {
+			return status, message, ""
 		}
 
 		// Add the new user to the list of users
