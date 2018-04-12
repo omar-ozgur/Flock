@@ -5,6 +5,7 @@ import (
 	"github.com/omar-ozgur/flock-api/utilities"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/oleiade/reflections.v1"
+	"strings"
 	"time"
 )
 
@@ -88,8 +89,15 @@ func GetUsers() (status string, message string, retrievedUsers []User) {
 // SearchUsers searches for users
 func SearchUsers(params map[string]interface{}) (status string, message string, retrievedUsers []User) {
 
+	// Modify parameters for sql
+	modified := make(map[string]interface{}, len(params))
+	for key, value := range params {
+		modified[strings.ToLower(key)] = value
+	}
+	params = modified
+
 	// Search for users
-	if err := Db.Where(params).First(&retrievedUsers).Error; err != nil {
+	if err := Db.Where(params).Find(&retrievedUsers).Error; err != nil {
 		return "error", "Failed to retrieve users", nil
 	}
 
@@ -133,15 +141,9 @@ func UpdateUser(id string, params map[string]interface{}) (status string, messag
 		return "error", "Failed to update user", User{}
 	}
 
-	// Get the updated user
-	if err := tx.First(&updatedUser, id).Error; err != nil {
-		tx.Rollback()
-		return "error", "Failed to retrieve updated user", User{}
-	}
-
 	// Commit the transaction
 	tx.Commit()
-	return "success", "Updated user", updatedUser
+	return "success", "Updated user", retrievedUser
 }
 
 // DeleteUser deletes a user
@@ -185,81 +187,6 @@ func DeleteUser(id string) (status string, message string) {
 	// Commit the transaction
 	tx.Commit()
 	return "success", "Deleted user"
-}
-
-// CreateAttendance adds the specified user as an attendee for the event
-func CreateAttendance(userId string, eventId string) (status string, message string) {
-
-	// Begin the transaction
-	tx := Db.Begin()
-
-	// Get the user
-	var retrievedUser User
-	if status, message, retrievedUser = GetUser(userId); status != "success" {
-		return status, message
-	}
-
-	// Get the event
-	var retrievedEvent Event
-	if status, message, retrievedEvent = GetEvent(eventId); status != "success" {
-		return status, message
-	}
-
-	// Create attendance
-	if err := tx.Model(&retrievedUser).Association("Attendances").Append(retrievedEvent).Error; err != nil {
-		tx.Rollback()
-		return "error", "Failed to create attendance"
-	}
-
-	// Commit the transaction
-	tx.Commit()
-	return "success", "Attendance was successfully recorded"
-}
-
-// GetUserAttendance gets events that a specific user is attending
-func GetUserAttendance(userId string) (status string, message string, retrievedEvents []Event) {
-
-	// Get the user
-	var retrievedUser User
-	if status, message, retrievedUser = GetUser(userId); status != "success" {
-		return status, message, nil
-	}
-
-	// Find events
-	if err := Db.Model(&retrievedUser).Association("Attendances").Find(&retrievedEvents).Error; err != nil {
-		return "error", "Failed to retrieve events", nil
-	}
-
-	return "success", "Retrieved events", retrievedEvents
-}
-
-// DeleteAttendance removes the specified user from the event's attendee list
-func DeleteAttendance(userId string, eventId string) (status string, message string) {
-
-	// Begin the transaction
-	tx := Db.Begin()
-
-	// Get the user
-	var retrievedUser User
-	if status, message, retrievedUser = GetUser(userId); status != "success" {
-		return status, message
-	}
-
-	// Get the event
-	var retrievedEvent Event
-	if status, message, retrievedEvent = GetEvent(eventId); status != "success" {
-		return status, message
-	}
-
-	// Delete attendance
-	if err := tx.Model(&retrievedUser).Association("Attendances").Delete(retrievedEvent).Error; err != nil {
-		tx.Rollback()
-		return "error", "Failed to delete attendance"
-	}
-
-	// Commit the transaction
-	tx.Commit()
-	return "success", "Attendance was successfully deleted"
 }
 
 // LoginUser logs in a user

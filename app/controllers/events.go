@@ -207,7 +207,7 @@ var EventsAttendees = http.HandlerFunc(
 		eventId := vars["id"]
 
 		// Get event attendees
-		status, message, retrievedAttendees := models.GetAttendees(eventId)
+		status, message, retrievedAttendees := models.GetEventAttendees(eventId)
 
 		// Return a response
 		JSON, _ := json.Marshal(map[string]interface{}{
