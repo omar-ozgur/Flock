@@ -54,15 +54,10 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 	}
 
 	// Create the user in the database
-	err := Db.Create(&user).Error
-	if err != nil {
-		return "error", "Failed to create the user", User{}
-	}
-
-	// Get the created user
-	status, message, createdUser = GetUser(string(user.ID))
-	if status != "success" {
-		return status, message, User{}
+	Db.Create(&user)
+	createdUser = user
+	if createdUser.ID == 0 {
+		return "error", "Failed to create user", User{}
 	}
 
 	return "success", "New user created", createdUser
@@ -72,9 +67,9 @@ func CreateUser(user User) (status string, message string, createdUser User) {
 func GetUser(id string) (status string, message string, retrievedUser User) {
 
 	// Find the user
-	err := Db.First(&retrievedUser, id).Error
-	if err != nil {
-		return "error", "Failed to retrieve the user", User{}
+	Db.First(&retrievedUser, id)
+	if retrievedUser.ID == 0 {
+		return "error", "Failed to retrieve user", User{}
 	}
 
 	return "success", "Retrieved user", retrievedUser
@@ -84,8 +79,8 @@ func GetUser(id string) (status string, message string, retrievedUser User) {
 func GetUsers() (status string, message string, retrievedUsers []User) {
 
 	// Find all users
-	err := Db.Find(&retrievedUsers).Error
-	if err != nil {
+	Db.Find(&retrievedUsers)
+	if len(retrievedUsers) <= 0 {
 		return "error", "Failed to retrieve users", nil
 	}
 
@@ -96,9 +91,9 @@ func GetUsers() (status string, message string, retrievedUsers []User) {
 func SearchUsers(params map[string]interface{}) (status string, message string, retrievedUsers []User) {
 
 	// Search for users
-	err := Db.Where(params).First(&retrievedUsers).Error
-	if err != nil {
-		return "error", "Failed to find users", nil
+	Db.Where(params).First(&retrievedUsers)
+	if len(retrievedUsers) <= 0 {
+		return "error", "Failed to retrieve users", nil
 	}
 
 	return "success", "Retrieved users", retrievedUsers
@@ -150,16 +145,10 @@ func UpdateUser(id string, params map[string]interface{}) (status string, messag
 	}
 
 	// Update the user
-	err := Db.Model(&retrievedUser).Updates(retrievedUser).Error
-	if err != nil {
-		return "error", "Failed to update user", User{}
-	}
+	Db.Model(&retrievedUser).Updates(retrievedUser)
 
 	// Get the updated user
-	err = Db.First(&updatedUser, id).Error
-	if err != nil {
-		return status, message, User{}
-	}
+	Db.First(&updatedUser, id)
 
 	return "success", "Updated user", updatedUser
 }
@@ -175,30 +164,18 @@ func DeleteUser(id string) (status string, message string) {
 
 	// Find related events
 	var events []Event
-	err := Db.Model(&retrievedUser).Related(&events).Error
-	if err != nil {
-		return "error", "Failed to find related events"
-	}
+	Db.Model(&retrievedUser).Related(&events)
 
 	// Delete related events
 	for _, event := range events {
-		err := Db.Unscoped().Delete(&event).Error
-		if err != nil {
-			return "error", "Failed to delete event"
-		}
+		Db.Unscoped().Delete(&event)
 	}
 
 	// Delete attendances
-	err = Db.Model(&retrievedUser).Association("Attendances").Clear().Error
-	if err != nil {
-		return "error", "Failed to delete attendances"
-	}
+	Db.Model(&retrievedUser).Association("Attendances").Clear()
 
 	// Delete the user
-	err = Db.Unscoped().Delete(&retrievedUser).Error
-	if err != nil {
-		return "error", "Failed to delete user"
-	}
+	Db.Unscoped().Delete(&retrievedUser)
 
 	return "success", "Deleted user"
 }
@@ -219,10 +196,7 @@ func CreateAttendance(userId string, eventId string) (status string, message str
 	}
 
 	// Create attendance
-	err := Db.Model(&retrievedUser).Association("Attendances").Append(retrievedEvent).Error
-	if err != nil {
-		return "error", "Failed to create attendance"
-	}
+	Db.Model(&retrievedUser).Association("Attendances").Append(retrievedEvent)
 
 	return "success", "Attendance was successfully recorded"
 }
@@ -237,10 +211,7 @@ func GetUserAttendance(userId string) (status string, message string, retrievedE
 	}
 
 	// Find events
-	err := Db.Model(&retrievedUser).Association("Attendances").Find(&retrievedEvents).Error
-	if err != nil {
-		return "error", "Failed to find events", nil
-	}
+	Db.Model(&retrievedUser).Association("Attendances").Find(&retrievedEvents)
 
 	return "success", "Retrieved events", retrievedEvents
 }
@@ -261,10 +232,7 @@ func DeleteAttendance(userId string, eventId string) (status string, message str
 	}
 
 	// Delete attendance
-	err := Db.Model(&retrievedUser).Association("Attendances").Delete(retrievedEvent).Error
-	if err != nil {
-		return "error", "Failed to delete attendance"
-	}
+	Db.Model(&retrievedUser).Association("Attendances").Delete(retrievedEvent)
 
 	return "success", "Attendance was successfully deleted"
 }
@@ -279,13 +247,10 @@ func LoginUser(user User) (status string, message string, createdToken string) {
 
 	// Find the user
 	var retrievedUser User
-	err := Db.Where("email = ?", user.Email).First(&retrievedUser).Error
-	if err != nil {
-		return "error", "Failed to find the user", ""
-	}
+	Db.Where("email = ?", user.Email).First(&retrievedUser)
 
 	// Check password
-	err = bcrypt.CompareHashAndPassword([]byte(retrievedUser.Password), []byte(user.Password))
+	err := bcrypt.CompareHashAndPassword([]byte(retrievedUser.Password), []byte(user.Password))
 	if err != nil {
 		return "error", "Error while checking password", ""
 	}

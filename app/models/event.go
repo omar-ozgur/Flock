@@ -50,22 +50,14 @@ func CreateEvent(event Event, userId string) (status string, message string, cre
 	}
 
 	// Create the user in the database
-	err = Db.Create(&event).Error
-	if err != nil {
-		return "error", "Failed to create the event", Event{}
+	Db.Create(&event)
+	createdEvent = event
+	if createdEvent.ID == 0 {
+		return "error", "Failed to create event", Event{}
 	}
 
 	// Create an attendee
-	err = Db.Model(&event).Association("Attendees").Append(retrievedUser).Error
-	if err != nil {
-		return "error", "Failed to create the attendee", Event{}
-	}
-
-	// Get the created event
-	err = Db.First(&createdEvent, event.ID).Error
-	if err != nil {
-		return "error", "Failed to retrieve the created event", Event{}
-	}
+	Db.Model(&createdEvent).Association("Attendees").Append(retrievedUser)
 
 	return "success", "New event created", createdEvent
 }
@@ -74,9 +66,9 @@ func CreateEvent(event Event, userId string) (status string, message string, cre
 func GetEvent(id string) (status string, message string, retrievedEvent Event) {
 
 	// Find the event
-	err := Db.First(&retrievedEvent, id).Error
-	if err != nil {
-		return "error", "Failed to retrieve the event", Event{}
+	Db.First(&retrievedEvent, id)
+	if retrievedEvent.ID == 0 {
+		return "error", "Failed to retrieve event", Event{}
 	}
 
 	return "success", "Retrieved event", retrievedEvent
@@ -86,9 +78,9 @@ func GetEvent(id string) (status string, message string, retrievedEvent Event) {
 func GetEvents() (status string, message string, retrievedEvents []Event) {
 
 	// Find the events
-	err := Db.Find(&retrievedEvents).Error
-	if err != nil {
-		return "error", "Failed to retrieve the events", nil
+	Db.Find(&retrievedEvents)
+	if len(retrievedEvents) <= 0 {
+		return "error", "Failed to retrieve events", nil
 	}
 
 	return "success", "Retrieved events", retrievedEvents
@@ -98,9 +90,9 @@ func GetEvents() (status string, message string, retrievedEvents []Event) {
 func SearchEvents(params map[string]interface{}) (status string, message string, retrievedEvents []Event) {
 
 	// Search for events
-	err := Db.Where(params).First(&retrievedEvents).Error
-	if err != nil {
-		return "error", "Failed to find events", nil
+	Db.Where(params).First(&retrievedEvents)
+	if len(retrievedEvents) <= 0 {
+		return "error", "Failed to retrieve events", nil
 	}
 
 	return "success", "Retrieved events", retrievedEvents
@@ -132,16 +124,10 @@ func UpdateEvent(id string, params map[string]interface{}) (status string, messa
 	}
 
 	// Update the event
-	err := Db.Model(&retrievedEvent).Updates(retrievedEvent).Error
-	if err != nil {
-		return "error", "Failed to update event", Event{}
-	}
+	Db.Model(&retrievedEvent).Updates(retrievedEvent)
 
 	// Get the updated event
-	err = Db.First(&updatedEvent, id).Error
-	if err != nil {
-		return status, message, Event{}
-	}
+	Db.First(&updatedEvent, id)
 
 	return "success", "Updated event", updatedEvent
 }
@@ -156,16 +142,10 @@ func DeleteEvent(id string) (status string, message string) {
 	}
 
 	// Delete associations
-	err := Db.Model(&foundEvent).Association("Attendees").Clear().Error
-	if err != nil {
-		return "error", "Failed to delete associations"
-	}
+	Db.Model(&foundEvent).Association("Attendees").Clear()
 
 	// Delete the event
-	err = Db.Delete(&foundEvent).Error
-	if err != nil {
-		return "error", "Failed to delete the event"
-	}
+	Db.Delete(&foundEvent)
 
 	return "success", "Deleted event"
 }
@@ -180,10 +160,7 @@ func GetAttendees(eventId string) (status string, message string, retrievedAtten
 	}
 
 	// Get attendees
-	err := Db.Model(&foundEvent).Association("Attendees").Find(&retrievedAttendees).Error
-	if err != nil {
-		return "error", "Failed to retrieve attendees", nil
-	}
+	Db.Model(&foundEvent).Association("Attendees").Find(&retrievedAttendees)
 
 	return "success", "Found attendees", retrievedAttendees
 }
