@@ -93,10 +93,10 @@ func GetUsers() (status string, message string, retrievedUsers []User) {
 }
 
 // SearchUsers searches for users
-func SearchUsers(parameters map[string]interface{}) (status string, message string, retrievedUsers []User) {
+func SearchUsers(params map[string]interface{}) (status string, message string, retrievedUsers []User) {
 
 	// Search for users
-	err := Db.Where(parameters).First(&retrievedUsers).Error
+	err := Db.Where(params).First(&retrievedUsers).Error
 	if err != nil {
 		return "error", "Failed to find users", nil
 	}
@@ -228,10 +228,10 @@ func CreateAttendance(userId string, eventId string) (status string, message str
 }
 
 // GetUserAttendance gets events that a specific user is attending
-func GetUserAttendance(id string) (status string, message string, retrievedEvents []Event) {
+func GetUserAttendance(userId string) (status string, message string, retrievedEvents []Event) {
 
 	// Get the user
-	status, message, retrievedUser := GetUser(id)
+	status, message, retrievedUser := GetUser(userId)
 	if status != "success" {
 		return status, message, nil
 	}

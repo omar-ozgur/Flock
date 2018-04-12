@@ -1,11 +1,9 @@
 package models
 
 import (
-	"fmt"
-	"github.com/asaskevich/govalidator"
 	"github.com/jinzhu/gorm"
 	_ "github.com/lib/pq"
-	"reflect"
+	"gopkg.in/oleiade/reflections.v1"
 	"strconv"
 	"time"
 )
@@ -24,46 +22,13 @@ type Event struct {
 	Time_expires time.Time `valid:"-"`
 }
 
-// eventRequiredParams contains parameters that are required
-var eventRequiredParams = map[string]bool{
-	"Title":       true,
-	"Description": true,
-	"Location":    true,
-	"Latitude":    true,
-	"Longitude":   true,
-	"Zip":         true}
-
-// eventModifiableParams contains paramaters that can be modified
-var eventModifiableParams = map[string]bool{
-	"Title":       true,
-	"Description": true,
-	"Location":    true,
-	"Latitude":    true,
-	"Longitude":   true,
-	"Zip":         true}
-
-// Initialize events
+// InitEvents initializes events
 func InitEvents() {
 	Db.AutoMigrate(&Event{})
 }
 
-// Get all events
-func GetEvents() (status string, message string, retrievedEvents []Event) {
-	Db.Find(&retrievedEvents)
-	return "success", "Retrieved events", retrievedEvents
-}
-
-// checkValid checks if an event is valid
-func (event *Event) checkValid() (status string, message string) {
-	_, err := govalidator.ValidateStruct(event)
-	if err != nil {
-		return "error", fmt.Sprintf("Failed to validate event: %s", err.Error())
-	}
-	return "success", ""
-}
-
-// Create an event
-func CreateEvent(userId string, event Event) (status string, message string, createdEvent Event) {
+// CreateEvent creates an event
+func CreateEvent(event Event, userId string) (status string, message string, createdEvent Event) {
 
 	// Convert the user ID to an integer
 	var err error
@@ -73,100 +38,140 @@ func CreateEvent(userId string, event Event) (status string, message string, cre
 	}
 
 	// Get the user
-	status, message, foundUser := GetUser(userId)
+	status, message, retrievedUser := GetUser(userId)
 	if status != "success" {
 		return status, message, Event{}
 	}
 
 	// Check if the event is valid
-	status, message = event.checkValid()
+	status, message = CheckValid(event)
 	if status != "success" {
 		return status, message, Event{}
 	}
 
-	// Create the event in the database
-	Db.Create(&event)
+	// Create the user in the database
+	err = Db.Create(&event).Error
+	if err != nil {
+		return "error", "Failed to create the event", Event{}
+	}
 
 	// Create an attendee
-	Db.Model(&event).Association("Attendees").Append(foundUser)
+	err = Db.Model(&event).Association("Attendees").Append(retrievedUser).Error
+	if err != nil {
+		return "error", "Failed to create the attendee", Event{}
+	}
 
 	// Get the created event
-	Db.First(&createdEvent, event.ID)
-	if status != "success" {
-		return "error", "Failed to create the event", Event{}
+	err = Db.First(&createdEvent, event.ID).Error
+	if err != nil {
+		return "error", "Failed to retrieve the created event", Event{}
 	}
 
 	return "success", "New event created", createdEvent
 }
 
-// Search events
-func SearchEvents(parameters map[string]interface{}) (status string, message string, retrievedEvents []Event) {
+// GetEvent gets a specific event
+func GetEvent(id string) (status string, message string, retrievedEvent Event) {
 
-	Db.Where(parameters).First(&retrievedEvents)
+	// Find the event
+	err := Db.First(&retrievedEvent, id).Error
+	if err != nil {
+		return "error", "Failed to retrieve the event", Event{}
+	}
+
+	return "success", "Retrieved event", retrievedEvent
+}
+
+// GetEvents gets all events
+func GetEvents() (status string, message string, retrievedEvents []Event) {
+
+	// Find the events
+	err := Db.Find(&retrievedEvents).Error
+	if err != nil {
+		return "error", "Failed to retrieve the events", nil
+	}
 
 	return "success", "Retrieved events", retrievedEvents
 }
 
-// Get an event
-func GetEvent(id string) (status string, message string, retrievedEvent Event) {
-	Db.First(&retrievedEvent, id)
-	return "success", "Retrieved event", retrievedEvent
+// SearchEvents searches for events
+func SearchEvents(params map[string]interface{}) (status string, message string, retrievedEvents []Event) {
+
+	// Search for events
+	err := Db.Where(params).First(&retrievedEvents).Error
+	if err != nil {
+		return "error", "Failed to find events", nil
+	}
+
+	return "success", "Retrieved events", retrievedEvents
 }
 
-// Update an event
-func UpdateEvent(id string, event Event) (status string, message string, updatedEvent Event) {
+// UpdateEvent updates an event
+func UpdateEvent(id string, params map[string]interface{}) (status string, message string, updatedEvent Event) {
 
-	// Get event fields
-	fields := reflect.ValueOf(event)
-	if fields.NumField() <= 0 {
-		return "error", "Invalid number of fields", event
+	// Find the existing event
+	status, message, retrievedEvent := GetEvent(id)
+	if status != "success" {
+		return status, message, Event{}
 	}
 
-	// Check for fields that can't be modified
-	parameterIndex := 1
-	for i := 0; i < fields.NumField(); i++ {
+	// Set changed parameters
+	for key, value := range params {
 
-		// Get field name and value
-		fieldName := fields.Type().Field(i).Name
-
-		// Check if field cannot be modified
-		if _, ok := eventModifiableParams[fieldName]; !ok {
-			return "error", fmt.Sprintf("Field '%s' cannot be modified", fieldName), Event{}
+		// Set updated field values
+		err := reflections.SetField(&retrievedEvent, key, value)
+		if err != nil {
+			return "error", err.Error(), Event{}
 		}
-
-		parameterIndex += 1
 	}
 
-	Db.Save(&event)
+	// Check if the event is valid
+	status, message = CheckValid(retrievedEvent)
+	if status != "success" {
+		return status, message, Event{}
+	}
+
+	// Update the event
+	err := Db.Model(&retrievedEvent).Updates(retrievedEvent).Error
+	if err != nil {
+		return "error", "Failed to update event", Event{}
+	}
 
 	// Get the updated event
-	Db.First(&updatedEvent, id)
-	if status == "success" {
-		return "success", "Updated event", updatedEvent
-	} else {
-		return "error", "Failed to retrieve updated event", Event{}
+	err = Db.First(&updatedEvent, id).Error
+	if err != nil {
+		return status, message, Event{}
 	}
+
+	return "success", "Updated event", updatedEvent
 }
 
-// Delete an event
+// DeleteEvent deletes an event
 func DeleteEvent(id string) (status string, message string) {
 
-	// Get event
+	// Find the event
 	status, message, foundEvent := GetEvent(id)
 	if status != "success" {
 		return status, message
 	}
 
 	// Delete associations
-	Db.Model(&foundEvent).Association("Attendees").Clear()
+	err := Db.Model(&foundEvent).Association("Attendees").Clear().Error
+	if err != nil {
+		return "error", "Failed to delete associations"
+	}
 
 	// Delete the event
-	Db.Delete(&foundEvent)
+	err = Db.Delete(&foundEvent).Error
+	if err != nil {
+		return "error", "Failed to delete the event"
+	}
 
 	return "success", "Deleted event"
 }
 
-func GetAttendees(eventId string) (status string, message string, attendees []User) {
+// GetAttendees gets attendees for a specific event
+func GetAttendees(eventId string) (status string, message string, retrievedAttendees []User) {
 
 	// Get event
 	status, message, foundEvent := GetEvent(eventId)
@@ -175,10 +180,10 @@ func GetAttendees(eventId string) (status string, message string, attendees []Us
 	}
 
 	// Get attendees
-	Db.Model(&foundEvent).Association("Attendees").Find(&attendees)
-	if len(attendees) <= 0 {
-		return "error", "No attendees found", nil
+	err := Db.Model(&foundEvent).Association("Attendees").Find(&retrievedAttendees).Error
+	if err != nil {
+		return "error", "Failed to retrieve attendees", nil
 	}
 
-	return "success", "Found attendees", attendees
+	return "success", "Found attendees", retrievedAttendees
 }

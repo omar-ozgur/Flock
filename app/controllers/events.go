@@ -51,9 +51,7 @@ var EventsCreate = http.HandlerFunc(
 		event := parseEvent(r)
 
 		// Create an event
-		status, message, createdEvent := models.CreateEvent(
-			currentUserId,
-			event)
+		status, message, createdEvent := models.CreateEvent(event, currentUserId)
 
 		// Return a response
 		JSON, _ := json.Marshal(map[string]interface{}{
@@ -139,11 +137,13 @@ var EventsUpdate = http.HandlerFunc(
 			return
 		}
 
-		// Parse the event from the body
-		event := parseEvent(r)
+		// Get body parameters
+		b, _ := ioutil.ReadAll(r.Body)
+		params := make(map[string]interface{})
+		json.Unmarshal(b, &params)
 
 		// Update the event
-		status, message, updatedEvent := models.UpdateEvent(vars["id"], event)
+		status, message, updatedEvent := models.UpdateEvent(vars["id"], params)
 
 		// Return a response
 		JSON, _ := json.Marshal(map[string]interface{}{
