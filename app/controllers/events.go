@@ -73,11 +73,13 @@ var EventsSearch = http.HandlerFunc(
 		// Set headers
 		w.Header().Set("Content-Type", "application/json")
 
-		// Parse the event from the body
-		event := parseEvent(r)
+		// Get body parameters
+		b, _ := ioutil.ReadAll(r.Body)
+		params := make(map[string]interface{})
+		json.Unmarshal(b, &params)
 
 		// Search for events
-		status, message, retrievedEvents := models.SearchEvents(event)
+		status, message, retrievedEvents := models.SearchEvents(params)
 
 		// Return a response
 		JSON, _ := json.Marshal(map[string]interface{}{

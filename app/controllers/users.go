@@ -129,7 +129,7 @@ var UsersSearch = http.HandlerFunc(
 		json.Unmarshal(b, &params)
 
 		// Search for users with the specified parameters
-		status, message, retrievedUsers := models.SearchUsers(params, "AND")
+		status, message, retrievedUsers := models.SearchUsers(params)
 
 		// Return response
 		JSON, _ := json.Marshal(map[string]interface{}{
@@ -171,8 +171,10 @@ var UsersUpdate = http.HandlerFunc(
 		// Set headers
 		w.Header().Set("Content-Type", "application/json")
 
-		// Parse the user from the body
-		user := parseUser(r)
+		// Get body parameters
+		b, _ := ioutil.ReadAll(r.Body)
+		params := make(map[string]interface{})
+		json.Unmarshal(b, &params)
 
 		// Get request parameters
 		vars := mux.Vars(r)
@@ -192,7 +194,7 @@ var UsersUpdate = http.HandlerFunc(
 		}
 
 		// Update the user
-		status, message, updatedUser := models.UpdateUser(vars["id"], user)
+		status, message, updatedUser := models.UpdateUser(vars["id"], params)
 
 		// Return response
 		JSON, _ := json.Marshal(map[string]interface{}{

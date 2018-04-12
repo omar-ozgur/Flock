@@ -1,14 +1,14 @@
 package models
 
 import (
-	"database/sql"
+	"github.com/jinzhu/gorm"
 )
 
 // Db is the database that the models will use
-var Db *sql.DB
+var Db *gorm.DB
 
 // SetDb sets the database for the models to use
-func SetDb(db *sql.DB) {
+func SetDb(db *gorm.DB) {
 	Db = db
 }
 
