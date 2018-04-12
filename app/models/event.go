@@ -13,10 +13,11 @@ import (
 // Event model
 type Event struct {
 	gorm.Model
-	Title        string    `valid:"required"`
-	Description  string    `valid:"required"`
-	Location     string    `valid:"required"`
-	User_id      int       `valid:"-"`
+	Title        string `valid:"required"`
+	Description  string `valid:"required"`
+	Location     string `valid:"required"`
+	UserID       int
+	Attendees    []*User   `gorm:"many2many:attendees;"`
 	Latitude     string    `valid:"latitude,required"`
 	Longitude    string    `valid:"longitude,required"`
 	Zip          int       `valid:"required"`
@@ -66,9 +67,15 @@ func CreateEvent(userId string, event Event) (status string, message string, cre
 
 	// Convert the user ID to an integer
 	var err error
-	event.User_id, err = strconv.Atoi(userId)
+	event.UserID, err = strconv.Atoi(userId)
 	if err != nil {
 		return "error", "Invalid user ID", Event{}
+	}
+
+	// Get the user
+	status, message, foundUser := GetUser(userId)
+	if status != "success" {
+		return status, message, Event{}
 	}
 
 	// Check if the event is valid
@@ -81,9 +88,7 @@ func CreateEvent(userId string, event Event) (status string, message string, cre
 	Db.Create(&event)
 
 	// Create an attendee
-	attendee := Attendee{Event_id: int(event.ID), User_id: event.User_id}
-	fmt.Println(attendee)
-	status, _, _ = CreateAttendee(attendee)
+	Db.Model(&event).Association("Attendees").Append(foundUser)
 
 	// Get the created event
 	Db.First(&createdEvent, event.ID)
@@ -146,9 +151,34 @@ func UpdateEvent(id string, event Event) (status string, message string, updated
 // Delete an event
 func DeleteEvent(id string) (status string, message string) {
 
-	var event Event
-	Db.First(&event, id)
-	Db.Delete(&event)
+	// Get event
+	status, message, foundEvent := GetEvent(id)
+	if status != "success" {
+		return status, message
+	}
+
+	// Delete associations
+	Db.Model(&foundEvent).Association("Attendees").Clear()
+
+	// Delete the event
+	Db.Delete(&foundEvent)
 
 	return "success", "Deleted event"
+}
+
+func GetAttendees(eventId string) (status string, message string, attendees []User) {
+
+	// Get event
+	status, message, foundEvent := GetEvent(eventId)
+	if status != "success" {
+		return status, message, nil
+	}
+
+	// Get attendees
+	Db.Model(&foundEvent).Association("Attendees").Find(&attendees)
+	if len(attendees) <= 0 {
+		return "error", "No attendees found", nil
+	}
+
+	return "success", "Found attendees", attendees
 }

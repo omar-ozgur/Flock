@@ -7,7 +7,6 @@ import (
 	"github.com/omar-ozgur/flock-api/app/models"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 )
 
 // parseEvent parses an event from the body of a request
@@ -131,7 +130,7 @@ var EventsUpdate = http.HandlerFunc(
 		currentUserId := parseCurrentUser(r)
 
 		// Check if the user has sufficient permissions to update the event
-		if currentUserId != fmt.Sprintf("%v", retrievedEvent.User_id) {
+		if currentUserId != fmt.Sprintf("%v", retrievedEvent.UserID) {
 			JSON, _ := json.Marshal(map[string]interface{}{
 				"status":  "error",
 				"message": "You do not have permission to edit this event",
@@ -173,7 +172,7 @@ var EventsDelete = http.HandlerFunc(
 		currentUserId := parseCurrentUser(r)
 
 		// Check if the user has sufficient permissions to delete the event
-		if currentUserId != fmt.Sprintf("%v", retrievedEvent.User_id) {
+		if currentUserId != fmt.Sprintf("%v", retrievedEvent.UserID) {
 			JSON, _ := json.Marshal(map[string]interface{}{
 				"status":  "error",
 				"message": "You do not have permission to delete this event",
@@ -204,9 +203,11 @@ var EventsAttendees = http.HandlerFunc(
 		// Get request parameters
 		vars := mux.Vars(r)
 
+		// Get the event Id
+		eventId := vars["id"]
+
 		// Get event attendees
-		status, message, retrievedAttendees := models.GetEventAttendees(
-			vars["id"])
+		status, message, retrievedAttendees := models.GetAttendees(eventId)
 
 		// Return a response
 		JSON, _ := json.Marshal(map[string]interface{}{
@@ -232,20 +233,18 @@ var EventsAttend = http.HandlerFunc(
 		vars := mux.Vars(r)
 
 		// Get the event Id
-		eventId, _ := strconv.Atoi(vars["id"])
+		eventId := vars["id"]
 
 		// Get the user Id
-		userId, _ := strconv.Atoi(currentUserId)
+		userId := currentUserId
 
 		// Create an attendee
-		attendee := models.Attendee{Event_id: eventId, User_id: userId}
-		status, message, createdAttendee := models.CreateAttendee(attendee)
+		status, message := models.CreateAttendance(userId, eventId)
 
 		// Return a response
 		JSON, _ := json.Marshal(map[string]interface{}{
-			"status":   status,
-			"message":  message,
-			"attendee": createdAttendee,
+			"status":  status,
+			"message": message,
 		})
 		w.Write(JSON)
 	},
@@ -265,14 +264,13 @@ var EventsDeleteAttendance = http.HandlerFunc(
 		vars := mux.Vars(r)
 
 		// Get the event Id
-		eventId, _ := strconv.Atoi(vars["id"])
+		eventId := vars["id"]
 
 		// Get the user Id
-		userId, _ := strconv.Atoi(currentUserId)
+		userId := currentUserId
 
 		// Delete the attendee
-		attendee := models.Attendee{Event_id: eventId, User_id: userId}
-		status, message := models.DeleteAttendee(attendee)
+		status, message := models.DeleteAttendance(userId, eventId)
 
 		// Return a response
 		JSON, _ := json.Marshal(map[string]interface{}{
